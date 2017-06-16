@@ -95,7 +95,7 @@ class FeedService:
     def launch(self,
                timeout: int=20,
                check_conn: bool = True,
-               headless: bool = False,
+               headless: bool = True,
                nohup: bool = True) -> None:
         """
         Launch IQConnect.exe if necessary
@@ -124,7 +124,7 @@ class FeedService:
                 prefix_str = ""
                 if nohup:
                     prefix_str += "nohup "
-                if headless:
+                if headless and sys.platform != 'darwin':
                     prefix_str += "xvfb-run -s -noreset -a "
                 iqfeed_call = prefix_str + base_iqfeed_call
 

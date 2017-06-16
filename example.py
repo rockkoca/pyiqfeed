@@ -12,15 +12,18 @@ for more details.
 import argparse
 import datetime
 import pyiqfeed as iq
+import numpy as np
+from typing import Sequence
 import time
 from passwords import dtn_product_id, dtn_login, dtn_password
+from pyiqfeed import *
 
 
 def launch_service():
     """Check if IQFeed.exe is running and start if not"""
 
     svc = iq.FeedService(product=dtn_product_id,
-                         version="Debugging",
+                         version="5.2.6.0",
                          login=dtn_login,
                          password=dtn_password)
     svc.launch()
@@ -32,19 +35,97 @@ def launch_service():
     # svc.launch(headless=True)
 
 
+class MyQuote(iq.QuoteConn):
+    def __init__(self, name: str = "QuoteConn", host: str = iq.FeedConn.host,
+                 port: int = iq.FeedConn.quote_port):
+        super().__init__(name, host, port)
+
+    def read_message(self):
+        super()._read_messages()
+        print(super()._next_message())
+
+
+class MyQuoteListener(iq.SilentQuoteListener):
+    def __init__(self, name: str):
+        super().__init__(name)
+
+    def process_invalid_symbol(self, bad_symbol: str) -> None:
+        print("%s: Invalid Symbol: %s" % (self._name, bad_symbol))
+
+    def process_news(self, news_item: QuoteConn.NewsMsg) -> None:
+        print("%s: News Item Received" % self._name)
+        print(news_item)
+
+    def process_regional_quote(self, quote: np.array) -> None:
+        print("%s: Regional Quote:" % self._name)
+        print(quote)
+
+    def process_summary(self, summary: np.array) -> None:
+        # print("%s: Data Summary" % self._name)
+        # print(summary)
+        # for i, data in enumerate(summary[0]):
+        #     print(i, data)
+        pass
+
+    def process_update(self, update: np.array) -> None:
+        print("%s: Data Update" % self._name)
+        print(update)
+
+    def process_fundamentals(self, fund: np.array) -> None:
+        print("%s: Fundamentals Received:" % self._name)
+        print(fund)
+        pass
+
+    def process_auth_key(self, key: str) -> None:
+        print("%s: Authorization Key Received: %s" % (self._name, key))
+
+    def process_keyok(self) -> None:
+        print("%s: Authorization Key OK" % self._name)
+
+    def process_customer_info(self,
+                              cust_info: QuoteConn.CustomerInfoMsg) -> None:
+        print("%s: Customer Information:" % self._name)
+        print(cust_info)
+
+    def process_watched_symbols(self, symbols: Sequence[str]):
+        print("%s: List of subscribed symbols:" % self._name)
+        print(symbols)
+
+    def process_log_levels(self, levels: Sequence[str]) -> None:
+        print("%s: Active Log levels:" % self._name)
+        print(levels)
+
+    def process_symbol_limit_reached(self, sym: str) -> None:
+        print("%s: Symbol Limit Reached with subscription to %s" %
+              (self._name, sym))
+
+    def process_ip_addresses_used(self, ip: str) -> None:
+        print("%s: IP Addresses Used: %s" % (self._name, ip))
+
+
 def get_level_1_quotes_and_trades(ticker: str, seconds: int):
     """Get level 1 quotes and trades for ticker for seconds seconds."""
 
-    quote_conn = iq.QuoteConn(name="pyiqfeed-Example-lvl1")
-    quote_listener = iq.VerboseQuoteListener("Level 1 Listener")
+    quote_conn = MyQuote(name="pyiqfeed-Example-lvl1")
+    quote_listener = MyQuoteListener("Level 1 Listener")
     quote_conn.add_listener(quote_listener)
     with iq.ConnConnector([quote_conn]) as connector:
         all_fields = sorted(list(iq.QuoteConn.quote_msg_map.keys()))
         quote_conn.select_update_fieldnames(all_fields)
         quote_conn.watch(ticker)
-        time.sleep(seconds)
-        quote_conn.unwatch(ticker)
-        quote_conn.remove_listener(quote_listener)
+        quote_conn.watch('NVDA')
+        quote_conn.news_on()
+
+        while quote_conn.reader_running():
+            # quote_conn.request_stats()
+
+            quote_conn.refresh(ticker)
+            # quote_conn.
+            # quote_conn.read_message()
+
+            time.sleep(.5)
+            # quote_conn.unwatch(ticker)
+            # quote_conn.remove_listener(quote_listener)
 
 
 def get_regional_quotes(ticker: str, seconds: int):
@@ -399,33 +480,35 @@ if __name__ == "__main__":
     results = parser.parse_args()
 
     launch_service()
+    print(results)
+    get_level_1_quotes_and_trades(ticker="AMD", seconds=1)
 
-    if results.level_1:
-        get_level_1_quotes_and_trades(ticker="SPY", seconds=30)
-    if results.regional_quotes:
-        get_regional_quotes(ticker="SPY", seconds=120)
-    if results.trade_updates:
-        get_trades_only(ticker="SPY", seconds=30)
-    if results.interval_data:
-        get_live_interval_bars(ticker="SPY", bar_len=5, seconds=30)
-    if results.admin_socket:
-        get_administrative_messages(seconds=30)
-    if results.historical_tickdata:
-        get_tickdata(ticker="SPY", max_ticks=100, num_days=4)
-    if results.historical_bars:
-        get_historical_bar_data(ticker="SPY",
-                                bar_len=60,
-                                bar_unit='s',
-                                num_bars=100)
-    if results.historical_daily_data:
-        get_daily_data(ticker="SPY", num_days=10)
-    if results.reference_data:
-        get_reference_data()
-    if results.lookups_and_chains:
-        get_ticker_lookups("SPH9GBM1")
-        get_equity_option_chain("SPY")
-        get_futures_chain("@VX")
-        get_futures_spread_chain("@VX")
-        get_futures_options_chain("CL")
-    if results.news:
-        get_news()
+    # if results.level_1:
+    #     print(get_level_1_quotes_and_trades(ticker="AMD", seconds=30))
+    # if results.regional_quotes:
+    #     get_regional_quotes(ticker="AMD", seconds=120)
+    # if results.trade_updates:
+    #     get_trades_only(ticker="AMD", seconds=30)
+    # if results.interval_data:
+    #     get_live_interval_bars(ticker="AMD", bar_len=5, seconds=30)
+    # if results.admin_socket:
+    #     get_administrative_messages(seconds=30)
+    # if results.historical_tickdata:
+    #     get_tickdata(ticker="AMD", max_ticks=100, num_days=4)
+    # if results.historical_bars:
+    #     get_historical_bar_data(ticker="AMD",
+    #                             bar_len=60,
+    #                             bar_unit='s',
+    #                             num_bars=100)
+    # if results.historical_daily_data:
+    #     get_daily_data(ticker="AMD", num_days=10)
+    # if results.reference_data:
+    #     get_reference_data()
+    # if results.lookups_and_chains:
+    #     get_ticker_lookups("SPH9GBM1")
+    #     get_equity_option_chain("AMD")
+    #     get_futures_chain("@VX")
+    #     get_futures_spread_chain("@VX")
+    #     get_futures_options_chain("CL")
+    # if results.news:
+    #     get_news()
