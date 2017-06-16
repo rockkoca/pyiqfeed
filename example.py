@@ -8,7 +8,7 @@ Then try with different options to see that different functionality. Not all
 library functionality is used in this file. Look at conn.py and listeners.py
 for more details.
 """
-
+import sys
 import argparse
 import datetime
 import pyiqfeed as iq
@@ -17,6 +17,57 @@ from typing import Sequence
 import time
 from passwords import dtn_product_id, dtn_login, dtn_password
 from pyiqfeed import *
+from pymongo import MongoClient
+
+
+def is_server() -> bool:
+    return sys.platform != 'darwin'
+
+
+class UpdateMongo(object):
+    def __init__(self):
+        if sys.platform == 'darwin':
+            self.client = MongoClient("mongodb://localhost:3001")
+        else:
+            self.client = MongoClient("mongodb://localhost:27017")
+        self.db = self.client.meteor
+
+    @staticmethod
+    def _process_regional_quote(data: np.array) -> dict:
+        if len(data) == 0:
+            return {}
+        else:
+            fields = data[0]
+            rgn_quote = dict()
+            rgn_quote["symbol"] = fields[0].decode('ascii')
+            rgn_quote["bid_price"] = str(fields[1])
+            rgn_quote["bid_size"] = int(fields[2])
+            # rgn_quote["bidTime"] = fields[5]
+            rgn_quote["ask_price"] = str(fields[4])
+            rgn_quote["ask_size"] = int(fields[5])
+            # rgn_quote["askTime"] = fields[8]
+            # rgn_quote["Fraction Display Code"] = fields[9]
+            # rgn_quote["Decimal Precision"] = fields[10]
+            # rgn_quote["Market Center"] = fields[11]
+            return rgn_quote
+
+    def update_regional_quote(self, data: np.array) -> None:
+        col = self.db.quotes
+        dic = self._process_regional_quote(data)
+        if dic:
+            # print(dic)
+            for key in dic.keys():
+                if dic[key] == 'nan' or not dic[key]:
+                    del dic[key]
+
+            result = col.update_one(
+                {'symbol': dic['symbol']},
+                {
+                    "$set": dic,
+                },
+                True
+            )
+            # print(result)
 
 
 def launch_service():
@@ -48,59 +99,74 @@ class MyQuote(iq.QuoteConn):
 class MyQuoteListener(iq.SilentQuoteListener):
     def __init__(self, name: str):
         super().__init__(name)
+        self.update_mongo = UpdateMongo()
 
     def process_invalid_symbol(self, bad_symbol: str) -> None:
-        print("%s: Invalid Symbol: %s" % (self._name, bad_symbol))
+        if not is_server():
+            print("%s: Invalid Symbol: %s" % (self._name, bad_symbol))
 
     def process_news(self, news_item: QuoteConn.NewsMsg) -> None:
-        print("%s: News Item Received" % self._name)
-        print(news_item)
+        if not is_server():
+            print("%s: News Item Received" % self._name)
+            print(news_item)
 
-    def process_regional_quote(self, quote: np.array) -> None:
-        print("%s: Regional Quote:" % self._name)
-        print(quote)
+    def process_regional_rgn_quote(self, quote: np.array) -> None:
+        if not is_server():
+            print("%s: Regional Quote:" % self._name)
+            print(quote)
+            self.update_mongo.update_regional_quote(quote)
 
     def process_summary(self, summary: np.array) -> None:
-        # print("%s: Data Summary" % self._name)
-        # print(summary)
-        # for i, data in enumerate(summary[0]):
-        #     print(i, data)
-        pass
+        if not is_server():
+            print("%s: Data Summary" % self._name)
+            print(summary)
+            # for i, data in enumerate(summary[0]):
+            #     print(i, data)
+            pass
 
     def process_update(self, update: np.array) -> None:
-        print("%s: Data Update" % self._name)
-        print(update)
+        if not is_server():
+            print("%s: Data Update" % self._name)
+            print(update)
 
     def process_fundamentals(self, fund: np.array) -> None:
-        # print("%s: Fundamentals Received:" % self._name)
-        # print(fund)
-        pass
+        if not is_server():
+            # print("%s: Fundamentals Received:" % self._name)
+            # print(fund)
+            pass
 
     def process_auth_key(self, key: str) -> None:
-        print("%s: Authorization Key Received: %s" % (self._name, key))
+        if not is_server():
+            print("%s: Authorization Key Received: %s" % (self._name, key))
 
     def process_keyok(self) -> None:
-        print("%s: Authorization Key OK" % self._name)
+        if not is_server():
+            print("%s: Authorization Key OK" % self._name)
 
     def process_customer_info(self,
                               cust_info: QuoteConn.CustomerInfoMsg) -> None:
-        print("%s: Customer Information:" % self._name)
-        print(cust_info)
+        if not is_server():
+            print("%s: Customer Information:" % self._name)
+            print(cust_info)
 
     def process_watched_symbols(self, symbols: Sequence[str]):
-        print("%s: List of subscribed symbols:" % self._name)
-        print(symbols)
+        if not is_server():
+            print("%s: List of subscribed symbols:" % self._name)
+            print(symbols)
 
     def process_log_levels(self, levels: Sequence[str]) -> None:
-        print("%s: Active Log levels:" % self._name)
-        print(levels)
+        if not is_server():
+            print("%s: Active Log levels:" % self._name)
+            print(levels)
 
     def process_symbol_limit_reached(self, sym: str) -> None:
-        print("%s: Symbol Limit Reached with subscription to %s" %
-              (self._name, sym))
+        if not is_server():
+            print("%s: Symbol Limit Reached with subscription to %s" %
+                  (self._name, sym))
 
     def process_ip_addresses_used(self, ip: str) -> None:
-        print("%s: IP Addresses Used: %s" % (self._name, ip))
+        if not is_server():
+            print("%s: IP Addresses Used: %s" % (self._name, ip))
 
 
 def get_level_1_quotes_and_trades(ticker: str, seconds: int):
@@ -109,11 +175,14 @@ def get_level_1_quotes_and_trades(ticker: str, seconds: int):
     quote_conn = MyQuote(name="pyiqfeed-Example-lvl1")
     quote_listener = MyQuoteListener("Level 1 Listener")
     quote_conn.add_listener(quote_listener)
+
     with iq.ConnConnector([quote_conn]) as connector:
         all_fields = sorted(list(iq.QuoteConn.quote_msg_map.keys()))
         quote_conn.select_update_fieldnames(all_fields)
         quote_conn.watch(ticker)
         quote_conn.watch('NVDA')
+        quote_conn.regional_watch(ticker)
+        quote_conn.regional_watch('NVDA')
         quote_conn.news_on()
 
         while quote_conn.reader_running():
