@@ -72,15 +72,16 @@ class UpdateMongo(object):
         dic = self._process_regional_quote(data)
         if dic:
             # print(dic)
-            keys = dic.keys()
+            keys = list(dic.keys())
+            new_dic = {}
             for key in keys:
-                if dic[key] == 'nan' or not dic[key]:
-                    del dic[key]
+                if dic[key] != 'nan' and dic[key]:
+                    new_dic[key] = dic[key]
 
             result = col.update_one(
-                {'symbol': dic['symbol']},
+                {'symbol': new_dic['symbol']},
                 {
-                    "$set": dic,
+                    "$set": new_dic,
                 },
                 True
             )
@@ -131,7 +132,7 @@ class MyQuoteListener(iq.SilentQuoteListener):
             print(news_item)
 
     def process_regional_rgn_quote(self, quote: np.array) -> None:
-        if not is_server() or 1:
+        if not is_server():
             print("%s: Regional Quote:" % self._name)
             print(quote)
             self.update_mongo.update_regional_quote(quote)
