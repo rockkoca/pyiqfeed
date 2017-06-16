@@ -130,7 +130,7 @@ class MyQuoteListener(iq.SilentQuoteListener):
             print(news_item)
 
     def process_regional_rgn_quote(self, quote: np.array) -> None:
-        if not is_server():
+        if not is_server() or 1:
             print("%s: Regional Quote:" % self._name)
             print(quote)
             self.update_mongo.update_regional_quote(quote)
