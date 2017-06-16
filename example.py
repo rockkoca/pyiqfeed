@@ -26,17 +26,18 @@ def is_server() -> bool:
 
 if sys.platform == 'darwin':
     client = MongoClient("mongodb://localhost:3001")
+    db = client.meteor
+
 else:
     client = MongoClient("mongodb://localhost:27017")
-
+    db = client.stock
 
 class UpdateMongo(object):
     def __init__(self):
-        self.db = client.meteor
 
     def get_symbols(self) -> list:
         symbols = []
-        col = self.db.instruments
+        col = db.instruments
         resultss = col.find()
         # print(resultss, 'symbols')
         for result in resultss:
@@ -65,7 +66,7 @@ class UpdateMongo(object):
             return rgn_quote
 
     def update_regional_quote(self, data: np.array) -> None:
-        col = self.db.quotes
+        col = db.quotes
         dic = self._process_regional_quote(data)
         if dic:
             # print(dic)
