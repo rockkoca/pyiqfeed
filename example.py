@@ -72,8 +72,8 @@ class MyQuoteListener(iq.SilentQuoteListener):
         print(update)
 
     def process_fundamentals(self, fund: np.array) -> None:
-        print("%s: Fundamentals Received:" % self._name)
-        print(fund)
+        # print("%s: Fundamentals Received:" % self._name)
+        # print(fund)
         pass
 
     def process_auth_key(self, key: str) -> None:
