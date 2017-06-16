@@ -21,16 +21,26 @@ from pymongo import MongoClient
 
 
 def is_server() -> bool:
-    return sys.platform != 'darwin'
+    return sys.platform == 'darwin'
+
+
+if sys.platform == 'darwin':
+    client = MongoClient("mongodb://localhost:3001")
+else:
+    client = MongoClient("mongodb://localhost:27017")
 
 
 class UpdateMongo(object):
     def __init__(self):
-        if sys.platform == 'darwin':
-            self.client = MongoClient("mongodb://localhost:3001")
-        else:
-            self.client = MongoClient("mongodb://localhost:27017")
-        self.db = self.client.meteor
+        self.db = client.meteor
+
+    def get_symbols(self) -> list:
+        symbols = []
+        col = self.db.instruments
+        results = col.find()
+        for result in results:
+            symbols.append(result['symbol'])
+        return symbols
 
     @staticmethod
     def _process_regional_quote(data: np.array) -> dict:
@@ -68,6 +78,9 @@ class UpdateMongo(object):
                 True
             )
             # print(result)
+
+
+update_mongo = UpdateMongo()
 
 
 def launch_service():
@@ -179,20 +192,26 @@ def get_level_1_quotes_and_trades(ticker: str, seconds: int):
     with iq.ConnConnector([quote_conn]) as connector:
         all_fields = sorted(list(iq.QuoteConn.quote_msg_map.keys()))
         quote_conn.select_update_fieldnames(all_fields)
-        quote_conn.watch(ticker)
-        quote_conn.watch('NVDA')
-        quote_conn.regional_watch(ticker)
-        quote_conn.regional_watch('NVDA')
+        # quote_conn.watch(ticker)
+        # quote_conn.watch('NVDA')
+        # quote_conn.regional_watch(ticker)
+        # quote_conn.regional_watch('NVDA')
+        for symbol in update_mongo.get_symbols():
+            quote_conn.watch(symbol)
+            quote_conn.regional_watch(symbol)
+
         quote_conn.news_on()
 
         while quote_conn.reader_running():
             # quote_conn.request_stats()
-
-            quote_conn.refresh(ticker)
+            try:
+                quote_conn.refresh(ticker)
+            except Exception as e:
+                print(e)
             # quote_conn.
             # quote_conn.read_message()
 
-            time.sleep(.5)
+            time.sleep(.1)
             # quote_conn.unwatch(ticker)
             # quote_conn.remove_listener(quote_listener)
 

@@ -34,11 +34,11 @@ def read_is_short_restricted(field: str) -> bool:
     if field != "":
         if field == 'Y':
             return True
-        if field == 'N':
-            return False
         else:
-            raise UnexpectedField(
-                "Unknown Value in Short Restricted Field: %s" % field)
+            return False
+        # else:
+        #     raise UnexpectedField(
+        #         "Unknown Value in Short Restricted Field: %s" % field)
     else:
         return False
 
