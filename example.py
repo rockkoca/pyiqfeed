@@ -34,6 +34,7 @@ else:
 
 class UpdateMongo(object):
     def __init__(self):
+        pass
 
     def get_symbols(self) -> list:
         symbols = []
