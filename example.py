@@ -72,7 +72,8 @@ class UpdateMongo(object):
         dic = self._process_regional_quote(data)
         if dic:
             # print(dic)
-            for key in dic.keys():
+            keys = dic.keys()
+            for key in keys:
                 if dic[key] == 'nan' or not dic[key]:
                     del dic[key]
 
