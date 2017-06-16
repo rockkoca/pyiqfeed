@@ -37,10 +37,12 @@ class UpdateMongo(object):
     def get_symbols(self) -> list:
         symbols = []
         col = self.db.instruments
-        results = col.find()
-        for result in results:
+        resultss = col.find()
+        # print(resultss, 'symbols')
+        for result in resultss:
+            # print(result)
             symbols.append(result['symbol'])
-        print(symbols)
+        # print(symbols)
         return symbols
 
     @staticmethod
