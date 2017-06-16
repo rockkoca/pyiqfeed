@@ -21,7 +21,7 @@ from pymongo import MongoClient
 
 
 def is_server() -> bool:
-    return sys.platform == 'darwin'
+    return sys.platform != 'darwin'
 
 
 if sys.platform == 'darwin':
@@ -31,6 +31,7 @@ if sys.platform == 'darwin':
 else:
     client = MongoClient("mongodb://localhost:27017")
     db = client.stock
+
 
 class UpdateMongo(object):
     def __init__(self):
@@ -44,7 +45,7 @@ class UpdateMongo(object):
         for result in resultss:
             # print(result)
             symbols.append(result['symbol'])
-        print(symbols)
+        # print(symbols)
         return symbols
 
     @staticmethod
@@ -202,7 +203,7 @@ def get_level_1_quotes_and_trades(ticker: str, seconds: int):
         # quote_conn.regional_watch(ticker)
         # quote_conn.regional_watch('NVDA')
         for symbol in update_mongo.get_symbols():
-            quote_conn.watch(symbol)
+            # quote_conn.watch(symbol)
             quote_conn.regional_watch(symbol)
 
         quote_conn.news_on()
