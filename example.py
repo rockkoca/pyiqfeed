@@ -40,6 +40,7 @@ class UpdateMongo(object):
         results = col.find()
         for result in results:
             symbols.append(result['symbol'])
+        print(symbols)
         return symbols
 
     @staticmethod
