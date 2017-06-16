@@ -42,7 +42,7 @@ class UpdateMongo(object):
         for result in resultss:
             # print(result)
             symbols.append(result['symbol'])
-        # print(symbols)
+        print(symbols)
         return symbols
 
     @staticmethod
