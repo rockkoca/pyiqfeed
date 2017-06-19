@@ -21,7 +21,7 @@ from pymongo import MongoClient
 
 
 def is_server() -> bool:
-    return sys.platform != 'darwin'
+    return sys.platform == 'darwin'
 
 
 if sys.platform == 'darwin':
@@ -138,9 +138,9 @@ class MyQuoteListener(iq.SilentQuoteListener):
             self.update_mongo.update_regional_quote(quote)
 
     def process_summary(self, summary: np.array) -> None:
-        if not is_server():
-            print("%s: Data Summary" % self._name)
-            print(summary)
+        if not is_server() or 1:
+            # print("%s: Data Summary\r" % self._name)
+            print('\r', summary)
             # for i, data in enumerate(summary[0]):
             #     print(i, data)
             pass
@@ -203,10 +203,10 @@ def get_level_1_quotes_and_trades(ticker: str, seconds: int):
         # quote_conn.watch(ticker)
         # quote_conn.watch('NVDA')
         # quote_conn.regional_watch(ticker)
-        # quote_conn.regional_watch('NVDA')
-        for symbol in update_mongo.get_symbols():
-            # quote_conn.watch(symbol)
-            quote_conn.regional_watch(symbol)
+        quote_conn.regional_watch('NVDA')
+        # for symbol in update_mongo.get_symbols():
+        #     # quote_conn.watch(symbol)
+        #     quote_conn.regional_watch(symbol)
 
         quote_conn.news_on()
 
