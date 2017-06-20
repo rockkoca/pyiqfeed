@@ -111,6 +111,7 @@ class UpdateMongo(object):
             rgn_quote['close'] = str(fields[15])
             rgn_quote['last'] = str(fields[22])
             rgn_quote['high'] = str(fields[31])
+            rgn_quote['low'] = str(fields[37])
             rgn_quote['tick_vol'] = int(fields[31])
             rgn_quote['volume'] = int(fields[31])
             rgn_quote['tick'] = int(fields[64])
