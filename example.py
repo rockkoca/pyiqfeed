@@ -203,9 +203,9 @@ class MyQuoteListener(iq.SilentQuoteListener):
 
     def process_summary(self, summary: np.array) -> None:
         if is_server():
-            if len(summary) > 0 and len(summary[0])  > 64 and summary[0][64] != self.summary_tick_id:
+            if len(summary) > 0 and len(summary[0]) > 64 and summary[0][64] != self.summary_tick_id:
                 self.update_mongo.update_quote(summary)
-                self.summary_tick_id = summary[64]
+                self.summary_tick_id = summary[0][64]
 
         if not is_server():
             # print("%s: Data Summary\r" % self._name)
