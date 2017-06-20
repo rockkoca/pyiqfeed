@@ -156,7 +156,8 @@ class UpdateMongo(object):
                 else:
                     if key in old:
                         new_dic[key] = old[key]
-
+            if 'low' not in new_dic:
+                print(old, dic)
             result = col.update_one(
                 {'symbol': new_dic['symbol']},
                 {
