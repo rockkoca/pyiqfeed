@@ -326,7 +326,7 @@ def get_level_1_quotes_and_trades(ticker: str, seconds: int):
                 # quote_conn.refresh(ticker)
                 for symbol in update_mongo.get_symbols():
                     # print(symbol)
-                    quote_conn.refresh(ticker)
+                    quote_conn.refresh(symbol)
 
             except Exception as e:
                 print(e)
