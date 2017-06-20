@@ -127,7 +127,7 @@ class FeedService:
                 if headless and sys.platform != 'darwin':
                     prefix_str += "xvfb-run -s -noreset -a "
                 iqfeed_call = prefix_str + base_iqfeed_call
-
+                print(iqfeed_call)
                 logging.info("Running %s" % iqfeed_call)
                 subprocess.Popen(iqfeed_call,
                                  shell=True,
