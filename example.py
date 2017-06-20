@@ -74,7 +74,7 @@ class UpdateMongo(object):
             # print(dic)
             keys = list(dic.keys())
             new_dic = {}
-            old = col.find_one({'symbol': new_dic['symbol']})
+            old = col.find_one({'symbol': dic['symbol']})
             # print(old)
             if not old:
                 old = {}
@@ -144,7 +144,7 @@ class UpdateMongo(object):
             # print(dic)
             keys = list(dic.keys())
             new_dic = {}
-            old = col.find_one({'symbol': new_dic['symbol']})
+            old = col.find_one({'symbol': dic['symbol']})
             print(old)
             if not old:
                 old = {}
