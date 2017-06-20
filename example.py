@@ -238,7 +238,7 @@ class MyQuoteListener(iq.SilentQuoteListener):
     def process_update(self, update: np.array) -> None:
         self.update_mongo.update_quote(update)
 
-        if not is_server():
+        if not is_server() or 1:
             print("%s: Data Update" % self._name)
             print(update)
 
