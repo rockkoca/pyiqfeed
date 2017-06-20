@@ -236,6 +236,8 @@ class MyQuoteListener(iq.SilentQuoteListener):
             pass
 
     def process_update(self, update: np.array) -> None:
+        self.update_mongo.update_quote(update)
+
         if not is_server():
             print("%s: Data Update" % self._name)
             print(update)
@@ -307,9 +309,10 @@ def get_level_1_quotes_and_trades(ticker: str, seconds: int):
         while quote_conn.reader_running():
             # quote_conn.request_stats()
             try:
-                # quote_conn.refresh(ticker)
-                for symbol in update_mongo.get_symbols():
-                    quote_conn.refresh(symbol)
+                quote_conn.refresh(ticker)
+                # for symbol in update_mongo.get_symbols():
+                #     print(symbol)
+                #     quote_conn.refresh(ticker)
 
             except Exception as e:
                 print(e)
