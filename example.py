@@ -87,6 +87,69 @@ class UpdateMongo(object):
             )
             # print(result)
 
+    @staticmethod
+    def _process_quote(data: np.array) -> dict:
+        if len(data) == 0:
+            return {}
+        else:
+            fields = data[0]
+            rgn_quote = dict()
+            # print(fields)
+            rgn_quote["symbol"] = fields[0].decode('ascii')
+            rgn_quote["ask_price"] = str(fields[1])
+            rgn_quote["ask_size"] = int(fields[4])
+            rgn_quote["bid_price"] = str(fields[8])
+            rgn_quote["bid_size"] = int(fields[11])
+            rgn_quote['close'] = str(fields[15])
+            rgn_quote['last'] = str(fields[22])
+            rgn_quote['high'] = str(fields[31])
+            rgn_quote['tick_vol'] = int(fields[31])
+            rgn_quote['volume'] = int(fields[31])
+            # rgn_quote["bidTime"] = fields[5]
+
+            # rgn_quote["askTime"] = fields[8]
+            # rgn_quote["Fraction Display Code"] = fields[9]
+            # rgn_quote["Decimal Precision"] = fields[10]
+            # rgn_quote["Market Center"] = fields[11]
+            # print(
+            #     "symbol:{}, ask{}, size:{}, bid:{} size:{} close:{}, last: {},high:{}, ?: {} tick_vol:{}, vol:{}, tick: {}".format(
+            #         fields[0],rx
+            #         fields[1],
+            #         fields[4],
+            #         fields[8],
+            #         fields[11],
+            #         fields[15],
+            #         fields[22],
+            #         fields[31],
+            #         fields[32],
+            #         fields[35],
+            #         fields[65],
+            #         fields[64]
+            #     ))
+            return rgn_quote
+
+    def update_quote(self, data: np.array) -> None:
+        col = db.quotes
+        dic = self._process_quote(data)
+        if dic:
+            # print(dic)
+            keys = list(dic.keys())
+            new_dic = {}
+            for key in keys:
+                if dic[key] != 'nan' and dic[key]:
+                    new_dic[key] = dic[key]
+
+            result = col.update_one(
+                {'symbol': new_dic['symbol']},
+                {
+                    "$set": new_dic,
+                },
+                True
+            )
+            # print(result)
+
+
+
 
 update_mongo = UpdateMongo()
 
@@ -121,6 +184,7 @@ class MyQuoteListener(iq.SilentQuoteListener):
     def __init__(self, name: str):
         super().__init__(name)
         self.update_mongo = UpdateMongo()
+        self.summary_tick_id = 0
 
     def process_invalid_symbol(self, bad_symbol: str) -> None:
         if not is_server():
@@ -135,14 +199,36 @@ class MyQuoteListener(iq.SilentQuoteListener):
         if not is_server():
             print("%s: Regional Quote:" % self._name)
             print(quote)
-            self.update_mongo.update_regional_quote(quote)
+        self.update_mongo.update_regional_quote(quote)
 
     def process_summary(self, summary: np.array) -> None:
-        if not is_server() or 1:
+        self.update_mongo.update_quote(summary)
+
+        if not is_server():
             # print("%s: Data Summary\r" % self._name)
-            print('\r', summary)
+            # print('\r', summary)
             # for i, data in enumerate(summary[0]):
             #     print(i, data)
+
+            summary = summary[0]
+            if summary[64] != self.summary_tick_id:
+                print(
+                    "symbol:{}, ask{}, size:{}, bid:{} size:{} close:{}, last: {},high:{}, ?: {} tick_vol:{}, vol:{}, tick: {}".format(
+                        summary[0],
+                        summary[1],
+                        summary[4],
+                        summary[8],
+                        summary[11],
+                        summary[15],
+                        summary[22],
+                        summary[31],
+                        summary[32],
+                        summary[35],
+                        summary[65],
+                        summary[64]
+                    ))
+                self.summary_tick_id = summary[64]
+
             pass
 
     def process_update(self, update: np.array) -> None:
@@ -203,10 +289,10 @@ def get_level_1_quotes_and_trades(ticker: str, seconds: int):
         # quote_conn.watch(ticker)
         # quote_conn.watch('NVDA')
         # quote_conn.regional_watch(ticker)
-        quote_conn.regional_watch('NVDA')
-        # for symbol in update_mongo.get_symbols():
-        #     # quote_conn.watch(symbol)
-        #     quote_conn.regional_watch(symbol)
+        # quote_conn.regional_watch('NVDA')
+        for symbol in update_mongo.get_symbols():
+            # quote_conn.watch(symbol)
+            quote_conn.regional_watch(symbol)
 
         quote_conn.news_on()
 
