@@ -208,7 +208,7 @@ class MyQuoteListener(iq.SilentQuoteListener):
         self.update_mongo.update_quote(summary)
         #         self.summary_tick_id = summary[0][64]
 
-        if not is_server():
+        if not is_server() or 1:
             # print("%s: Data Summary\r" % self._name)
             # print('\r', summary)
             # for i, data in enumerate(summary[0]):
@@ -298,7 +298,7 @@ def get_level_1_quotes_and_trades(ticker: str, seconds: int):
         # quote_conn.watch('NVDA')
         # quote_conn.regional_watch(ticker)
         # quote_conn.regional_watch('NVDA')
-        # print(update_mongo.get_symbols())
+        print(update_mongo.get_symbols())
         for symbol in update_mongo.get_symbols():
             print(symbol, end=', ')
             quote_conn.watch(symbol)
