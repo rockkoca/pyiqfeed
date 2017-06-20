@@ -74,11 +74,11 @@ class UpdateMongo(object):
             # print(dic)
             keys = list(dic.keys())
             new_dic = {}
-            old = col.find({'symbol': new_dic['symbol']})
-            if len(old) == 0:
+            old = col.find_one({'symbol': new_dic['symbol']})
+            print(old)
+            if not old:
                 old = {}
-            else:
-                old = old[0]
+
             for key in keys:
                 if dic[key] != 'nan' and dic[key]:
                     new_dic[key] = dic[key]
