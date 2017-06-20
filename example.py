@@ -204,7 +204,7 @@ class MyQuoteListener(iq.SilentQuoteListener):
     def process_summary(self, summary: np.array) -> None:
         self.update_mongo.update_quote(summary)
 
-        if not is_server() or 1:
+        if 1:
             # print("%s: Data Summary\r" % self._name)
             # print('\r', summary)
             # for i, data in enumerate(summary[0]):
