@@ -79,6 +79,9 @@ class UpdateMongo(object):
             if not old:
                 old = {}
 
+            if new_dic['tick'] == old.get('tick', 0):
+                return
+
             for key in keys:
                 if dic[key] != 'nan' and dic[key]:
                     new_dic[key] = dic[key]
@@ -158,6 +161,10 @@ class UpdateMongo(object):
                         new_dic[key] = old[key]
             if 'low' not in new_dic:
                 print(old, dic)
+
+            if new_dic['tick'] == old.get('tick', 0):
+                return
+
             result = col.update_one(
                 {'symbol': new_dic['symbol']},
                 {
