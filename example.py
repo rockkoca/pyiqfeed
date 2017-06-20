@@ -105,6 +105,7 @@ class UpdateMongo(object):
             rgn_quote['high'] = str(fields[31])
             rgn_quote['tick_vol'] = int(fields[31])
             rgn_quote['volume'] = int(fields[31])
+            rgn_quote['tick'] = int(fields[64])
             # rgn_quote["bidTime"] = fields[5]
 
             # rgn_quote["askTime"] = fields[8]
@@ -184,7 +185,7 @@ class MyQuoteListener(iq.SilentQuoteListener):
     def __init__(self, name: str):
         super().__init__(name)
         self.update_mongo = UpdateMongo()
-        self.summary_tick_id = 0
+        self.summary_tick_id = {}
 
     def process_invalid_symbol(self, bad_symbol: str) -> None:
         if not is_server():
@@ -202,10 +203,10 @@ class MyQuoteListener(iq.SilentQuoteListener):
         self.update_mongo.update_regional_quote(quote)
 
     def process_summary(self, summary: np.array) -> None:
-        if is_server():
-            if len(summary) > 0 and len(summary[0]) > 64 and summary[0][64] != self.summary_tick_id:
-                self.update_mongo.update_quote(summary)
-                self.summary_tick_id = summary[0][64]
+        # if is_server():
+        #     if len(summary) > 0 and len(summary[0]) > 64 and summary[0][64] != self.summary_tick_id:
+        #         self.update_mongo.update_quote(summary)
+        #         self.summary_tick_id = summary[0][64]
 
         if not is_server():
             # print("%s: Data Summary\r" % self._name)
