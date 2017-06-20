@@ -74,9 +74,15 @@ class UpdateMongo(object):
             # print(dic)
             keys = list(dic.keys())
             new_dic = {}
+            old = col.find({'symbol': new_dic['symbol']})
+            if len(old) == 0:
+                old = {}
             for key in keys:
                 if dic[key] != 'nan' and dic[key]:
                     new_dic[key] = dic[key]
+                else:
+                    if key in old:
+                        new_dic[key] = old[key]
 
             result = col.update_one(
                 {'symbol': new_dic['symbol']},
@@ -148,8 +154,6 @@ class UpdateMongo(object):
                 True
             )
             # print(result)
-
-
 
 
 update_mongo = UpdateMongo()
