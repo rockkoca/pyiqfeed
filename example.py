@@ -21,7 +21,7 @@ from pymongo import MongoClient
 
 
 def is_server() -> bool:
-    return sys.platform != 'darwin'
+    return sys.platform == 'darwin'
 
 
 if sys.platform == 'darwin':
