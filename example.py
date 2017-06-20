@@ -202,9 +202,12 @@ class MyQuoteListener(iq.SilentQuoteListener):
         self.update_mongo.update_regional_quote(quote)
 
     def process_summary(self, summary: np.array) -> None:
-        self.update_mongo.update_quote(summary)
+        if is_server():
+            if summary[64] != self.summary_tick_id:
+                self.update_mongo.update_quote(summary)
+                self.summary_tick_id = summary[64]
 
-        if 1:
+        if not is_server():
             # print("%s: Data Summary\r" % self._name)
             # print('\r', summary)
             # for i, data in enumerate(summary[0]):
@@ -303,7 +306,10 @@ def get_level_1_quotes_and_trades(ticker: str, seconds: int):
         while quote_conn.reader_running():
             # quote_conn.request_stats()
             try:
-                quote_conn.refresh(ticker)
+                # quote_conn.refresh(ticker)
+                for symbol in update_mongo.get_symbols():
+                    quote_conn.refresh(symbol)
+
             except Exception as e:
                 print(e)
             # quote_conn.
