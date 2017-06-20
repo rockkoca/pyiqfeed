@@ -282,7 +282,9 @@ def get_level_1_quotes_and_trades(ticker: str, seconds: int):
     quote_conn = MyQuote(name="pyiqfeed-Example-lvl1")
     quote_listener = MyQuoteListener("Level 1 Listener")
     quote_conn.add_listener(quote_listener)
-
+    print(
+        'level 1'
+    )
     with iq.ConnConnector([quote_conn]) as connector:
         all_fields = sorted(list(iq.QuoteConn.quote_msg_map.keys()))
         quote_conn.select_update_fieldnames(all_fields)
