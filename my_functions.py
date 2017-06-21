@@ -388,11 +388,11 @@ class MyBarListener(VerboseIQFeedListener):
         super().__init__(name)
 
     def process_latest_bar_update(self, bar_data: np.array) -> None:
-        print("%s: Process latest bar update:" % self._name)
+        # print("%s: Process latest bar update:" % self._name)
         # print(bar_data)
         update_mongo.update_bars(bar_data)
         data = bar_data[0]
-        print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
+        # print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
 
     def process_live_bar(self, bar_data: np.array) -> None:
         print("%s: Process live bar:" % self._name)
@@ -407,11 +407,11 @@ class MyBarListener(VerboseIQFeedListener):
         data = bar_data[0]
         key = "{}:{}:{}".format(data[0], data[1], data[2])
         if key not in history_cache:
-            print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
+            # print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
             update_mongo.update_bars(bar_data)
             history_cache[key] = data[2]
         else:
-            print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
+            # print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
             print('in cache')
 
     def process_invalid_symbol(self, bad_symbol: str) -> None:
