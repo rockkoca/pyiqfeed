@@ -522,6 +522,7 @@ def get_live_interval_bars(ticker: str, bar_len: int, seconds: int):
             stocks = update_mongo.get_symbols()
             if ticker in stocks and not stocks[ticker]['auto'].get('chart', 0):
                 bar_conn.unwatch(ticker)
+                bar_conn.remove_listener(bar_listener)
                 print('unwatch bar', ticker)
                 return
             time.sleep(seconds)
