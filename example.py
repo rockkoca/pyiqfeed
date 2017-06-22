@@ -63,6 +63,8 @@ if __name__ == "__main__":
 
         pre = future_name[:3]
         name = future_name[4:]
+        if name == 'TOPS':
+            return
         if pre == 'bar':
             # pool[key] = executor.submit(get_live_interval_bars, ticker=name,
             #                             bar_len=stocks[name]['auto'].get('chart_len', 60),
@@ -97,10 +99,10 @@ if __name__ == "__main__":
 
     # We can use a with statement to ensure threads are cleaned up promptly
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(stocks) * 5) as executor:
-        # launch_futures('bar:DRYS')  # KEEP A RUNNING CONNECTION
-        get_live_interval_bars(ticker='DRYS',
-                               bar_len=60,
-                               seconds=6)
+        launch_futures('bar:TOPS')  # KEEP A RUNNING CONNECTION
+        # get_live_interval_bars(ticker='DRYS',
+        #                        bar_len=60,
+        #                        seconds=6)
 
         while 1:
             # launch_service()
