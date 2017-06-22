@@ -19,11 +19,11 @@ from passwords import dtn_product_id, dtn_login, dtn_password
 from pyiqfeed import *
 from pymongo import MongoClient
 
-verbose = 0
+verbose = 1
 
 
 def is_server() -> bool:
-    return sys.platform != 'darwin'
+    return sys.platform == 'darwin'
 
 
 if sys.platform == 'darwin':
