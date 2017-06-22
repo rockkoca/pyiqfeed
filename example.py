@@ -97,7 +97,10 @@ if __name__ == "__main__":
 
     # We can use a with statement to ensure threads are cleaned up promptly
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(stocks) * 5) as executor:
-        launch_futures('bar:DRYS')  # KEEP A RUNNING CONNECTION
+        # launch_futures('bar:DRYS')  # KEEP A RUNNING CONNECTION
+        get_live_interval_bars(ticker='DRYS',
+                               bar_len=60,
+                               seconds=6)
 
         while 1:
             # launch_service()
