@@ -71,7 +71,7 @@ if __name__ == "__main__":
             if stocks[name]['auto'].get('chart', 0):
                 # print(stocks[name])
                 if future_name not in pool or not pool[future_name].running():
-                    print('watch bar' + name)
+                    print('watch bar ' + name)
                     pool[future_name] = executor.submit(get_live_interval_bars, ticker=name,
                                                         bar_len=stocks[name]['auto'].get('bar_len', 60),
                                                         seconds=6)
@@ -81,7 +81,7 @@ if __name__ == "__main__":
         elif pre == 'lv1':
             if stocks[name]['auto'].get('lv1', 0):
                 if future_name not in pool or not pool[future_name].running():
-                    print('watch lv1' + name)
+                    print('watch lv1 ' + name)
                     pool[future_name] = executor.submit(get_level_1_quotes_and_trades, ticker=stock,
                                                         seconds=1)
             else:
