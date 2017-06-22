@@ -82,7 +82,7 @@ if __name__ == "__main__":
             if stocks[name]['auto'].get('lv1', 0):
                 if future_name not in pool or not pool[future_name].running():
                     print('watch lv1 ' + name)
-                    pool[future_name] = executor.submit(get_level_1_quotes_and_trades, ticker=stock,
+                    pool[future_name] = executor.submit(get_level_1_quotes_and_trades, ticker=name,
                                                         seconds=1)
             else:
                 stop()
