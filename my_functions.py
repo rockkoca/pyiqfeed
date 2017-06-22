@@ -20,7 +20,7 @@ from pyiqfeed import *
 from pymongo import MongoClient
 
 verbose = 1
-look_back_bars = 480
+look_back_bars = 240
 
 def is_server() -> bool:
     return sys.platform == 'darwin'
