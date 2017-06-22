@@ -20,7 +20,7 @@ from pyiqfeed import *
 from pymongo import MongoClient
 
 verbose = 1
-
+look_back_bars = 720
 
 def is_server() -> bool:
     return sys.platform == 'darwin'
@@ -230,7 +230,7 @@ class UpdateMongo(object):
 
         sorted(old['bars'], key=getKey)
         l = len(old['bars'])
-        old['bars'] = old['bars'][-240:]
+        old['bars'] = old['bars'][-look_back_bars:]
         # print(old['bars'])
         result = col.update_one(
             {'symbol': symbol},
@@ -517,7 +517,7 @@ def get_live_interval_bars(ticker: str, bar_len: int, seconds: int):
 
     with iq.ConnConnector([bar_conn]) as connector:
         bar_conn.watch(symbol=ticker, interval_len=bar_len,
-                       interval_type='s', update=1, lookback_bars=240)
+                       interval_type='s', update=1, lookback_bars=look_back_bars)
         while 1:
             stocks = update_mongo.get_symbols()
             if ticker in stocks and not stocks[ticker]['auto'].get('chart', 0):
