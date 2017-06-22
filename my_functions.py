@@ -283,7 +283,7 @@ class MyQuoteListener(iq.SilentQuoteListener):
     def process_news(self, news_item: QuoteConn.NewsMsg) -> None:
         if not is_server() and verbose:
             print("%s: News Item Received" % self._name)
-            print(news_item.)
+            print(news_item)
 
     def process_regional_rgn_quote(self, quote: np.array) -> None:
         if not is_server() and verbose:
