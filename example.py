@@ -71,7 +71,6 @@ if __name__ == "__main__":
             if stocks[name]['auto'].get('chart', 0):
                 # print(stocks[name])
                 if future_name not in pool or not pool[future_name].running():
-                    launch_service()  # make sure the service is running
                     print('watch bar ' + name)
                     pool[future_name] = executor.submit(get_live_interval_bars, ticker=name,
                                                         bar_len=stocks[name]['auto'].get('bar_len', 60),
@@ -82,7 +81,6 @@ if __name__ == "__main__":
         elif pre == 'lv1':
             if stocks[name]['auto'].get('lv1', 0):
                 if future_name not in pool or not pool[future_name].running():
-                    launch_service()  # make sure the service is running
                     print('watch lv1 ' + name)
                     pool[future_name] = executor.submit(get_level_1_quotes_and_trades, ticker=name,
                                                         seconds=1)
@@ -99,9 +97,10 @@ if __name__ == "__main__":
 
     # We can use a with statement to ensure threads are cleaned up promptly
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(stocks) * 5) as executor:
+        launch_futures('bar:DRYS')  # KEEP A RUNNING CONNECTION
 
         while 1:
-            launch_service()
+            # launch_service()
             # print(results)
             # pre fix is always 3 characters
 
@@ -126,7 +125,7 @@ if __name__ == "__main__":
                         launch_futures(key)
                         print('{} crashed and restarted'.format(key))
 
-                time.sleep(.5)
+                time.sleep(1)
                 # concurrent.futures.
                 # for future in concurrent.futures.as_completed(pool):
                 #     # print(future)
