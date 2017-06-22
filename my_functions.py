@@ -19,6 +19,8 @@ from passwords import dtn_product_id, dtn_login, dtn_password
 from pyiqfeed import *
 from pymongo import MongoClient
 
+verbose = 0
+
 
 def is_server() -> bool:
     return sys.platform != 'darwin'
@@ -36,17 +38,14 @@ else:
 class UpdateMongo(object):
     def __init__(self):
         self.cache = {}
-        pass
 
-    def get_symbols(self) -> list:
-        symbols = []
+    @staticmethod
+    def get_symbols() -> dict:
+        symbols = {}
         col = db.instruments
-        resultss = col.find()
-        # print(resultss, 'symbols')
-        for result in resultss:
-            # print(result)
-            symbols.append(result['symbol'])
-        # print(symbols)
+        # resultss = col.find()
+        for result in col.find():
+            symbols[result['symbol']] = result
         return symbols
 
     @staticmethod
@@ -122,7 +121,7 @@ class UpdateMongo(object):
 
             dt = iq.field_readers.read_ccyymmdd(str(fields[43]).replace('-', ''))
             dt = iq.field_readers.date_us_to_datetime(dt, int(fields[36]))
-            rgn_quote['tick_time'] = str(int(np.floor(dt.timestamp()))) + '0000'
+            rgn_quote['tick_time'] = str(int(np.floor(dt.timestamp()))) + '000'
             # rgn_quote["bidTime"] = fields[5]
 
             # rgn_quote["askTime"] = fields[8]
@@ -192,7 +191,7 @@ class UpdateMongo(object):
             fields = data[0]
             bar = dict()
             bar["symbol"] = fields[0].decode('ascii')
-            bar['date'] = str(int(self.tick_time(fields[1], fields[2]).timestamp())) + '0000'
+            bar['date'] = str(int(self.tick_time(fields[1], fields[2]).timestamp())) + '000'
             bar['open'] = fields[3]
             bar['high'] = fields[4]
             bar['low'] = fields[5]
@@ -231,7 +230,7 @@ class UpdateMongo(object):
 
         sorted(old['bars'], key=getKey)
         l = len(old['bars'])
-        old['bars'] = old['bars'][-60:]
+        old['bars'] = old['bars'][-240:]
         # print(old['bars'])
         result = col.update_one(
             {'symbol': symbol},
@@ -278,16 +277,16 @@ class MyQuoteListener(iq.SilentQuoteListener):
         self.summary_tick_id = {}
 
     def process_invalid_symbol(self, bad_symbol: str) -> None:
-        if not is_server():
+        if not is_server() and verbose:
             print("%s: Invalid Symbol: %s" % (self._name, bad_symbol))
 
     def process_news(self, news_item: QuoteConn.NewsMsg) -> None:
-        if not is_server():
+        if not is_server() and verbose:
             print("%s: News Item Received" % self._name)
             print(news_item)
 
     def process_regional_rgn_quote(self, quote: np.array) -> None:
-        if not is_server():
+        if not is_server() and verbose:
             print("%s: Regional Quote:" % self._name)
             print(quote)
         self.update_mongo.update_regional_quote(quote)
@@ -298,7 +297,7 @@ class MyQuoteListener(iq.SilentQuoteListener):
         self.update_mongo.update_quote(summary)
         #         self.summary_tick_id = summary[0][64]
 
-        if not is_server():
+        if not is_server() and verbose:
             # print("%s: Data Summary\r" % self._name)
             # print('\r', summary)
             # for i, data in enumerate(summary[0]):
@@ -328,47 +327,47 @@ class MyQuoteListener(iq.SilentQuoteListener):
     def process_update(self, update: np.array) -> None:
         self.update_mongo.update_quote(update)
 
-        if not is_server():
+        if not is_server() and verbose:
             print("%s: Data Update" % self._name)
             print(update)
 
     def process_fundamentals(self, fund: np.array) -> None:
-        if not is_server():
+        if not is_server() and verbose:
             # print("%s: Fundamentals Received:" % self._name)
             # print(fund)
             pass
 
     def process_auth_key(self, key: str) -> None:
-        if not is_server():
+        if not is_server() and verbose:
             print("%s: Authorization Key Received: %s" % (self._name, key))
 
     def process_keyok(self) -> None:
-        if not is_server():
+        if not is_server() and verbose:
             print("%s: Authorization Key OK" % self._name)
 
     def process_customer_info(self,
                               cust_info: QuoteConn.CustomerInfoMsg) -> None:
-        if not is_server():
+        if not is_server() and verbose:
             print("%s: Customer Information:" % self._name)
             print(cust_info)
 
     def process_watched_symbols(self, symbols: Sequence[str]):
-        if not is_server():
+        if not is_server() and verbose:
             print("%s: List of subscribed symbols:" % self._name)
             print(symbols)
 
     def process_log_levels(self, levels: Sequence[str]) -> None:
-        if not is_server():
+        if not is_server() and verbose:
             print("%s: Active Log levels:" % self._name)
             print(levels)
 
     def process_symbol_limit_reached(self, sym: str) -> None:
-        if not is_server():
+        if not is_server() and verbose:
             print("%s: Symbol Limit Reached with subscription to %s" %
                   (self._name, sym))
 
     def process_ip_addresses_used(self, ip: str) -> None:
-        if not is_server():
+        if not is_server() and verbose:
             print("%s: IP Addresses Used: %s" % (self._name, ip))
 
 
@@ -392,17 +391,21 @@ class MyBarListener(VerboseIQFeedListener):
         # print(bar_data)
         update_mongo.update_bars(bar_data)
         data = bar_data[0]
-        # print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
+        if not is_server() and verbose:
+            print("%s: Process latest bar update:" % self._name)
+            print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
 
     def process_live_bar(self, bar_data: np.array) -> None:
-        print("%s: Process live bar:" % self._name)
-        # print(bar_data)
         update_mongo.update_bars(bar_data)
-        data = bar_data[0]
-        print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
+        if not is_server() and verbose:
+            print("%s: Process live bar:" % self._name)
+            # print(bar_data)
+            data = bar_data[0]
+            print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
 
     def process_history_bar(self, bar_data: np.array) -> None:
-        print("%s: Process history bar:" % self._name)
+        if not is_server() and verbose:
+            print("%s: Process history bar:" % self._name)
         # print(bar_data)
         data = bar_data[0]
         key = "{}:{}:{}".format(data[0], data[1], data[2])
@@ -411,63 +414,71 @@ class MyBarListener(VerboseIQFeedListener):
             update_mongo.update_bars(bar_data)
             history_cache[key] = data[2]
         else:
-            # print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
-            print('in cache')
+            if not is_server() and verbose:
+                # print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
+                print('in cache')
 
     def process_invalid_symbol(self, bad_symbol: str) -> None:
-        print("%s: Invalid Symbol: %s" % (self._name, bad_symbol))
+        if not is_server() and verbose:
+            print("%s: Invalid Symbol: %s" % (self._name, bad_symbol))
 
     def process_symbol_limit_reached(self, symbol: str) -> None:
-        print("%s: Symbol Limit reached: %s" % (self._name, symbol))
+        if not is_server() and verbose:
+            print("%s: Symbol Limit reached: %s" % (self._name, symbol))
 
     def process_replaced_previous_watch(self, symbol: str) -> None:
-        print("%s: Replaced previous watch: %s" % (self._name, symbol))
+        if not is_server() and verbose:
+            print("%s: Replaced previous watch: %s" % (self._name, symbol))
 
     def process_watch(self, symbol: str, interval: int, request_id: str):
-        print("%s: Process watch: %s, %d, %s" %
-              (self._name, symbol, interval, request_id))
+        if not is_server() and verbose:
+            print("%s: Process watch: %s, %d, %s" %
+                  (self._name, symbol, interval, request_id))
 
 
 def get_level_1_quotes_and_trades(ticker: str, seconds: int):
     """Get level 1 quotes and trades for ticker for seconds seconds."""
 
-    quote_conn = MyQuote(name="pyiqfeed-Example-lvl1")
-    quote_listener = MyQuoteListener("Level 1 Listener")
+    quote_conn = MyQuote(name="{} pyiqfeed-lvl1".format(ticker))
+    quote_listener = MyQuoteListener("{} Level 1 Listener".format(ticker))
     quote_conn.add_listener(quote_listener)
-    print(
-        'level 1'
-    )
+
     with iq.ConnConnector([quote_conn]) as connector:
         all_fields = sorted(list(iq.QuoteConn.quote_msg_map.keys()))
         quote_conn.select_update_fieldnames(all_fields)
-        # quote_conn.watch(ticker)
+        quote_conn.watch(ticker)
         # quote_conn.watch('NVDA')
         # quote_conn.regional_watch(ticker)
         # quote_conn.regional_watch('NVDA')
-        print(update_mongo.get_symbols())
-        for symbol in update_mongo.get_symbols():
-            print(symbol, end=', ')
-            quote_conn.watch(symbol)
-            # quote_conn.regional_watch(symbol)
+        # print(update_mongo.get_symbols())
+        # for symbol in update_mongo.get_symbols():
+        #     print(symbol, end=', ')
+        #     quote_conn.watch(symbol)
+        #     # quote_conn.regional_watch(symbol)
 
         quote_conn.news_on()
 
         while quote_conn.reader_running():
             # quote_conn.request_stats()
-            try:
-                # quote_conn.refresh(ticker)
-                for symbol in update_mongo.get_symbols():
-                    # print(symbol)
-                    quote_conn.refresh(symbol)
+            # try:
+            quote_conn.refresh(ticker)
+            # for symbol in update_mongo.get_symbols():
+            #     # print(symbol)
+            #     quote_conn.refresh(symbol)
 
-            except Exception as e:
-                print(e)
+            # except Exception as e:
+            #     print(e)
             # quote_conn.
             # quote_conn.read_message()
 
-            time.sleep(.1)
-            # quote_conn.unwatch(ticker)
-            # quote_conn.remove_listener(quote_listener)
+            time.sleep(3)
+            stocks = update_mongo.get_symbols()
+            if ticker in stocks and not stocks[ticker]['auto'].get('lv1', 0):
+                print('unwatch lv1', ticker)
+                break
+
+        quote_conn.unwatch(ticker)
+        quote_conn.remove_listener(quote_listener)
 
 
 def get_regional_quotes(ticker: str, seconds: int):
@@ -498,14 +509,19 @@ def get_trades_only(ticker: str, seconds: int):
 
 def get_live_interval_bars(ticker: str, bar_len: int, seconds: int):
     """Get real-time interval bars"""
-    while 1:
-        bar_conn = iq.BarConn(name='pyiqfeed-Example-interval-bars')
-        bar_listener = MyBarListener("Bar Listener")
-        bar_conn.add_listener(bar_listener)
+    bar_conn = iq.BarConn(name='pyiqfeed-Example-interval-bars')
+    bar_listener = MyBarListener("{} Bar Listener".format(ticker))
+    bar_conn.add_listener(bar_listener)
 
-        with iq.ConnConnector([bar_conn]) as connector:
-            bar_conn.watch(symbol=ticker, interval_len=bar_len,
-                           interval_type='s', update=1, lookback_bars=120)
+    with iq.ConnConnector([bar_conn]) as connector:
+        bar_conn.watch(symbol=ticker, interval_len=bar_len,
+                       interval_type='s', update=1, lookback_bars=240)
+        while 1:
+            stocks = update_mongo.get_symbols()
+            if ticker in stocks and not stocks[ticker]['auto'].get('chart', 0):
+                bar_conn.unwatch(ticker)
+                print('unwatch bar', ticker)
+                return
             time.sleep(seconds)
 
 

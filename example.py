@@ -40,26 +40,100 @@ if __name__ == "__main__":
     # get_daily_data(ticker="AMD", num_days=10)
     # get_live_interval_bars(ticker="AMD", bar_len=600, seconds=30)
 
+    pool = {}
+    stocks = update_mongo.get_symbols()
+
+
+    def combine_name(p: str, n: str) -> str:
+        return "{}:{}".format(p, n)
+
+
+    def launch_futures(future_name: str, real=True, **kwargs) -> None:
+        # global stocks
+        # stocks = update_mongo.get_symbols()
+
+        def stop():
+            if future_name in pool and pool[future_name].running():
+                pool[future_name].cancel()
+                print('stop {} '.format(future_name))
+            else:
+                pool[future_name] = executor.submit(str, future_name)
+                pool[future_name].cancel()
+                # print('skip {} bar'.format(stock))
+
+        pre = future_name[:3]
+        name = future_name[4:]
+        if pre == 'bar':
+            # pool[key] = executor.submit(get_live_interval_bars, ticker=name,
+            #                             bar_len=stocks[name]['auto'].get('chart_len', 60),
+            #                             seconds=60)
+
+            if stocks[name]['auto'].get('chart', 0):
+                # print(stocks[name])
+                if future_name not in pool or not pool[future_name].running():
+                    pool[future_name] = executor.submit(get_live_interval_bars, ticker=name,
+                                                        bar_len=stocks[name]['auto'].get('bar_len', 60),
+                                                        seconds=6)
+            else:
+                stop()
+
+        elif pre == 'lv1':
+            if stocks[name]['auto'].get('lv1', 0):
+                if future_name not in pool or not pool[future_name].running():
+                    pool[future_name] = executor.submit(get_level_1_quotes_and_trades, ticker=stock,
+                                                        seconds=1)
+            else:
+                stop()
+        elif pre == 'lv2':
+            print(pre, ' has not been implemented yet!')
+            pass
+
+        else:
+            print(pre, 'what the hell is this?????')
+            pass
+
+
     # We can use a with statement to ensure threads are cleaned up promptly
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(stocks) * 5) as executor:
 
         while 1:
             launch_service()
-            print(results)
-            pool = [
-                executor.submit(get_live_interval_bars, ticker="AMD", bar_len=60, seconds=60),
-                executor.submit(get_live_interval_bars, ticker="NVDA", bar_len=60, seconds=60),
-                # executor.submit(get_daily_data, ticker="AMD", num_days=10),
-                # executor.submit(get_level_1_quotes_and_trades, ticker="AMD", seconds=1)
-            ]
-            for future in concurrent.futures.as_completed(pool):
-                try:
-                    data = future.result()
-                except Exception as exc:
-                    print('generated an exception: %s' % exc)
-                    launch_service()
-                else:
-                    print('%s' % data)
+            # print(results)
+            # pre fix is always 3 characters
+
+            for stock in stocks.keys():
+                bar = combine_name('bar', stock)
+                launch_futures(bar, stocks[stock]['auto'].get('chart', 0), bar_len=60)
+
+                lv1 = combine_name('lv1', stock)
+                launch_futures(lv1, stocks[stock]['auto'].get('chart', 0))
+
+            while 1:
+                stocks = update_mongo.get_symbols()
+                for key, future in pool.items():
+                    # if not future.running():
+                    # check if user changed the status of the char or lvs
+                    launch_futures(key)
+
+                    try:
+                        pass
+                    except Exception as e:
+                        print(e)
+                        launch_futures(key)
+                        print('{} crashed and restarted'.format(key))
+
+                time.sleep(.5)
+                # concurrent.futures.
+                # for future in concurrent.futures.as_completed(pool):
+                #     # print(future)
+                #     try:
+                #         data = future.result()
+                #         print(future, data)
+                #     except Exception as exc:
+                #         print('generated an exception: %s' % exc)
+                #         launch_service()
+                #     else:
+                #         print('%s' % data)
 
 
 
