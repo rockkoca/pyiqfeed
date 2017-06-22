@@ -442,6 +442,7 @@ def get_level_1_quotes_and_trades(ticker: str, seconds: int):
     quote_conn = MyQuote(name="{} pyiqfeed-lvl1".format(ticker))
     quote_listener = MyQuoteListener("{} Level 1 Listener".format(ticker))
     quote_conn.add_listener(quote_listener)
+    print('get_level_1_quotes_and_trades ' + ticker)
 
     with iq.ConnConnector([quote_conn]) as connector:
         all_fields = sorted(list(iq.QuoteConn.quote_msg_map.keys()))
@@ -509,9 +510,10 @@ def get_trades_only(ticker: str, seconds: int):
 
 def get_live_interval_bars(ticker: str, bar_len: int, seconds: int):
     """Get real-time interval bars"""
-    bar_conn = iq.BarConn(name='pyiqfeed-Example-interval-bars')
+    bar_conn = iq.BarConn(name='{} pyiqfeed-Example-interval-bars'.format(ticker))
     bar_listener = MyBarListener("{} Bar Listener".format(ticker))
     bar_conn.add_listener(bar_listener)
+    print('get_live_interval_bars ' + ticker)
 
     with iq.ConnConnector([bar_conn]) as connector:
         bar_conn.watch(symbol=ticker, interval_len=bar_len,
