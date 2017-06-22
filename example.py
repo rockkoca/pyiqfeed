@@ -52,6 +52,13 @@ if __name__ == "__main__":
         # global stocks
         # stocks = update_mongo.get_symbols()
 
+        # used to keep the connection
+        stocks['TOPS'] = {
+            'auto': {
+                'chart': 1
+            }
+        }
+
         def stop():
             if future_name in pool and pool[future_name].running():
                 pool[future_name].cancel()
@@ -63,8 +70,6 @@ if __name__ == "__main__":
 
         pre = future_name[:3]
         name = future_name[4:]
-        if name == 'TOPS':
-            return
         if pre == 'bar':
             # pool[key] = executor.submit(get_live_interval_bars, ticker=name,
             #                             bar_len=stocks[name]['auto'].get('chart_len', 60),
