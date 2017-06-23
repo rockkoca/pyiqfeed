@@ -58,7 +58,7 @@ if __name__ == "__main__":
         stocks['TOPS'] = {
             'auto': {
                 'chart': 1,
-                'chart_inv': 30
+                'chart_inv': 300
             }
         }
 
@@ -81,6 +81,7 @@ if __name__ == "__main__":
             if stocks[name]['auto'].get('chart', 0):
                 update_inv = False
                 bar_len = stocks[name]['auto'].get('chart_inv', 30)
+                last_bar_len = chart_invs.get(future_name, 0)
                 if bar_len != chart_invs.get(future_name, 0):
                     if chart_invs.get(future_name, 0):
                         print("unwatch {} @ {}".format(name, chart_invs.get(future_name, bar_len)))

@@ -19,7 +19,7 @@ from passwords import dtn_product_id, dtn_login, dtn_password
 from pyiqfeed import *
 from pymongo import MongoClient
 
-verbose = 0
+verbose = 1
 look_back_bars = 480
 
 
@@ -414,10 +414,10 @@ class MyBarListener(VerboseIQFeedListener):
         # print(bar_data)
         data = bar_data[0]
         key = "{}:{}:{}".format(data[0], data[1], data[2])
-        if key not in history_cache or (key in history_cache and history_cache[key] != data[8]):
+        if key not in history_cache or (key in history_cache and history_cache[key] != data[2]):
             # print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
             update_mongo.update_bars(bar_data)
-            history_cache[key] = data[8]
+            history_cache[key] = data[2]
         else:
             if not is_server() and verbose:
                 # print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
@@ -525,13 +525,15 @@ def get_live_interval_bars(ticker: str, bar_len: int, seconds: int):
                        interval_type='s', update=1, lookback_bars=look_back_bars)
         while 1:
             stocks = update_mongo.get_symbols()
-            if ticker in stocks and not stocks[ticker]['auto'].get('chart', 0):
+            if ticker in stocks and \
+                    (not stocks[ticker]['auto'].get('chart', 0)
+                     or stocks[ticker]['auto'].get('chart_inv', 0) != bar_len):
                 bar_conn.unwatch(ticker)
                 bar_conn.remove_listener(bar_listener)
-                print('unwatch bar', ticker)
+                print('unwatch bar', ticker, bar_len)
                 return
             time.sleep(seconds)
-
+# def unwatch_live_interval_bar
 
 def get_administrative_messages(seconds: int):
     """Run and AdminConn and print connection stats to screen."""
