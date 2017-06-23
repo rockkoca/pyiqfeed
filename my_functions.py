@@ -414,10 +414,10 @@ class MyBarListener(VerboseIQFeedListener):
         # print(bar_data)
         data = bar_data[0]
         key = "{}:{}:{}".format(data[0], data[1], data[2])
-        if key not in history_cache or (key in history_cache and history_cache[key] != data[3:]):
+        if key not in history_cache or (key in history_cache and history_cache[key] != data[8]):
             # print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
             update_mongo.update_bars(bar_data)
-            history_cache[key] = data[3:]
+            history_cache[key] = data[8]
         else:
             if not is_server() and verbose:
                 # print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
