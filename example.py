@@ -30,7 +30,7 @@ if __name__ == "__main__":
     results = parser.parse_args()
 
     launch_service()
-    print(results)
+    # print(results)
     # get_level_1_quotes_and_trades(ticker="AMD", seconds=1)
     # get_tickdata(ticker="AMD", max_ticks=10000, num_days=4)
     # get_historical_bar_data(ticker="AMD",
