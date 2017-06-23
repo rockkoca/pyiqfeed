@@ -42,7 +42,9 @@ if __name__ == "__main__":
 
     pool = {}
     stocks = update_mongo.get_symbols()
+    chart_invs = {
 
+    }
 
     def combine_name(p: str, n: str) -> str:
         return "{}:{}".format(p, n)
@@ -55,7 +57,8 @@ if __name__ == "__main__":
         # used to keep the connection
         stocks['TOPS'] = {
             'auto': {
-                'chart': 1
+                'chart': 1,
+                'chart_inv': 30
             }
         }
 
@@ -76,11 +79,19 @@ if __name__ == "__main__":
             #                             seconds=60)
 
             if stocks[name]['auto'].get('chart', 0):
+                update_inv = False
+                bar_len = stocks[name]['auto'].get('chart_inv', 30)
+                if bar_len != chart_invs.get(future_name, 0):
+                    if chart_invs.get(future_name, 0):
+                        print("unwatch {} @ {}".format(name, chart_invs.get(future_name, bar_len)))
+                    update_inv = True
+                    chart_invs[future_name] = bar_len
+
                 # print(stocks[name])
-                if future_name not in pool or not pool[future_name].running():
-                    print('watch bar ' + name)
+                if update_inv or future_name not in pool or not pool[future_name].running():
+                    print('watch bar ' + name + " : " + str(bar_len))
                     pool[future_name] = executor.submit(get_live_interval_bars, ticker=name,
-                                                        bar_len=stocks[name]['auto'].get('bar_len', 60),
+                                                        bar_len=bar_len,
                                                         seconds=6)
             else:
                 stop()

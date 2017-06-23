@@ -20,7 +20,8 @@ from pyiqfeed import *
 from pymongo import MongoClient
 
 verbose = 1
-look_back_bars = 240
+look_back_bars = 480
+
 
 def is_server() -> bool:
     return sys.platform == 'darwin'
@@ -229,7 +230,6 @@ class UpdateMongo(object):
             return item['date']
 
         sorted(old['bars'], key=getKey)
-        l = len(old['bars'])
         old['bars'] = old['bars'][-look_back_bars:]
         # print(old['bars'])
         result = col.update_one(
@@ -306,7 +306,8 @@ class MyQuoteListener(iq.SilentQuoteListener):
             summary = summary[0]
             if summary[64] != self.summary_tick_id:
                 print(
-                    "symbol:{}, ask{}, size:{}, bid:{} size:{} close:{}, last: {},high:{}, ?: {} tick_vol:{}, vol:{}, tick: {}".format(
+                    "symbol:{}, ask{}, size:{}, bid:{} size:{} close:{}, last: "
+                    "{},high:{}, ?: {} tick_vol:{}, vol:{}, tick: {}".format(
                         summary[0],
                         summary[1],
                         summary[4],
