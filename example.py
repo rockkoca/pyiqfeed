@@ -2,6 +2,8 @@
 # coding=utf-8
 from my_functions import *
 import concurrent.futures
+import multiprocessing
+import subprocess
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run pyiqfeed example code")
@@ -40,87 +42,88 @@ if __name__ == "__main__":
     # get_daily_data(ticker="AMD", num_days=10)
     # get_live_interval_bars(ticker="AMD", bar_len=600, seconds=30)
 
+    # We can use a with statement to ensure threads are cleaned up promptly
+    # TODO Fix MongoClient opened before fork. Create MongoClient
     pool = {}
     stocks = update_mongo.get_symbols()
     chart_invs = {
 
     }
+    if multiprocessing.cpu_count() > 10:
+        pool_executor = concurrent.futures.ProcessPoolExecutor(max_workers=len(stocks) * 5)
+        print('Using multi process', multiprocessing.cpu_count(), 'cores')
+    else:
+        pool_executor = concurrent.futures.ThreadPoolExecutor(max_workers=len(stocks) * 5)
+        print('Using multi threading', multiprocessing.cpu_count(), 'cores')
 
-    def combine_name(p: str, n: str) -> str:
-        return "{}:{}".format(p, n)
+    with pool_executor as executor:
+        executor.submit(get_administrative_messages, 1)
 
+        def launch_futures(future_name: str, real=True, **kwargs) -> None:
+            # global stocks
+            # stocks = update_mongo.get_symbols()
 
-    def launch_futures(future_name: str, real=True, **kwargs) -> None:
-        # global stocks
-        # stocks = update_mongo.get_symbols()
-
-        # used to keep the connection
-        stocks['TOPS'] = {
-            'auto': {
-                'chart': 1,
-                'chart_inv': 300
+            # used to keep the connection
+            stocks['TOPS'] = {
+                'auto': {
+                    'chart': 1,
+                    'chart_inv': 300
+                }
             }
-        }
 
-        def stop():
-            if future_name in pool and pool[future_name].running():
-                pool[future_name].cancel()
-                print('stop {} '.format(future_name))
+            def stop():
+                if future_name in pool and pool[future_name].running():
+                    pool[future_name].cancel()
+                    print('stop {} '.format(future_name))
+                else:
+                    pool[future_name] = executor.submit(str, future_name)
+                    pool[future_name].cancel()
+                    # print('skip {} bar'.format(stock))
+
+            pre = future_name[:3]
+            name = future_name[4:]
+            if pre == 'bar':
+                # pool[key] = executor.submit(get_live_interval_bars, ticker=name,
+                #                             bar_len=stocks[name]['auto'].get('chart_len', 60),
+                #                             seconds=60)
+
+                if stocks[name]['auto'].get('chart', 0):
+                    update_inv = False
+                    bar_len = stocks[name]['auto'].get('chart_inv', 30)
+                    last_bar_len = chart_invs.get(future_name, 0)
+                    if bar_len != chart_invs.get(future_name, 0):
+                        if chart_invs.get(future_name, 0):
+                            print("unwatch {} @ {}".format(name, chart_invs.get(future_name, bar_len)))
+                        update_inv = True
+                        chart_invs[future_name] = bar_len
+
+                    # print(stocks[name])
+                    if update_inv or future_name not in pool or not pool[future_name].running():
+                        print('watch bar ' + name + " : " + str(bar_len))
+                        pool[future_name] = executor.submit(get_live_interval_bars, ticker=name,
+                                                            bar_len=bar_len,
+                                                            seconds=2)
+                else:
+                    stop()
+
+            elif pre == 'lv1':
+                if stocks[name]['auto'].get('lv1', 0):
+                    if future_name not in pool or not pool[future_name].running():
+                        print('watch lv1 ' + name)
+                        pool[future_name] = executor.submit(get_level_1_quotes_and_trades, ticker=name,
+                                                            seconds=1)
+                else:
+                    stop()
+            elif pre == 'lv2':
+                print(pre, ' has not been implemented yet!')
+                pass
+
             else:
-                pool[future_name] = executor.submit(str, future_name)
-                pool[future_name].cancel()
-                # print('skip {} bar'.format(stock))
-
-        pre = future_name[:3]
-        name = future_name[4:]
-        if pre == 'bar':
-            # pool[key] = executor.submit(get_live_interval_bars, ticker=name,
-            #                             bar_len=stocks[name]['auto'].get('chart_len', 60),
-            #                             seconds=60)
-
-            if stocks[name]['auto'].get('chart', 0):
-                update_inv = False
-                bar_len = stocks[name]['auto'].get('chart_inv', 30)
-                last_bar_len = chart_invs.get(future_name, 0)
-                if bar_len != chart_invs.get(future_name, 0):
-                    if chart_invs.get(future_name, 0):
-                        print("unwatch {} @ {}".format(name, chart_invs.get(future_name, bar_len)))
-                    update_inv = True
-                    chart_invs[future_name] = bar_len
-
-                # print(stocks[name])
-                if update_inv or future_name not in pool or not pool[future_name].running():
-                    print('watch bar ' + name + " : " + str(bar_len))
-                    pool[future_name] = executor.submit(get_live_interval_bars, ticker=name,
-                                                        bar_len=bar_len,
-                                                        seconds=6)
-            else:
-                stop()
-
-        elif pre == 'lv1':
-            if stocks[name]['auto'].get('lv1', 0):
-                if future_name not in pool or not pool[future_name].running():
-                    print('watch lv1 ' + name)
-                    pool[future_name] = executor.submit(get_level_1_quotes_and_trades, ticker=name,
-                                                        seconds=1)
-            else:
-                stop()
-        elif pre == 'lv2':
-            print(pre, ' has not been implemented yet!')
-            pass
-
-        else:
-            print(pre, 'what the hell is this?????')
-            pass
+                print(pre, 'what the hell is this?????')
+                pass
 
 
-    # We can use a with statement to ensure threads are cleaned up promptly
-    # TODO Fix MongoClient opened before fork. Create MongoClient
-    with concurrent.futures.ThreadPoolExecutor(max_workers=len(stocks) * 5) as executor:
         launch_futures('bar:TOPS')  # KEEP A RUNNING CONNECTION
-        # get_live_interval_bars(ticker='DRYS',
-        #                        bar_len=60,
-        #                        seconds=6)
 
         while 1:
             # launch_service()
@@ -142,11 +145,30 @@ if __name__ == "__main__":
                     launch_futures(key)
 
                     try:
+                        # if key == 'bar:TOPS' and future.running():
+                        #     print(key, future.running())
+                        quote_conn = iq.QuoteConn(name="test connection")
+                        quote_conn.connect()
+                        quote_conn.disconnect()
+
+                    except concurrent.futures.TimeoutError as e:
+                        print(e)
                         pass
+                    except ConnectionResetError as e:
+                        time.sleep(5)
+                        launch_service()
+
                     except Exception as e:
+                        time.sleep(5)
+                        if str(e).startswith('[Errno'):
+                            subprocess.call('killall iqconnect.exe', shell=True)
+                            launch_service()
                         print(e)
                         launch_futures(key)
                         print('{} crashed and restarted'.format(key))
+                    #
+                    # try:
+                    #     future.exception()
 
                 time.sleep(1)
                 # concurrent.futures.

@@ -12,4 +12,4 @@ setup(
     author_email='akapur@amvirk.com',
     license='GPL v2',
     packages=['pyiqfeed'],
-    zip_safe=False, install_requires=['numpy'])
+    zip_safe=False, install_requires=['numpy', 'requests'])

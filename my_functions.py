@@ -9,6 +9,7 @@ library functionality is used in this file. Look at conn.py and listeners.py
 for more details.
 """
 import sys
+import signal
 import argparse
 import datetime
 import pyiqfeed as iq
@@ -18,9 +19,16 @@ import time
 from passwords import dtn_product_id, dtn_login, dtn_password
 from pyiqfeed import *
 from pymongo import MongoClient
+import threading
 
-verbose = 1
+verbose = 0
 look_back_bars = 480
+
+
+def set_timeout(func: object, sec: int) -> threading.Timer:
+    t = threading.Timer(sec, func)
+    t.start()
+    return t
 
 
 def is_server() -> bool:
@@ -38,12 +46,20 @@ else:
 
 class UpdateMongo(object):
     def __init__(self):
-        self.cache = {}
+        self.cache = {
+            'bars': {}
+        }
+        if sys.platform == 'darwin':
+            self.client = MongoClient("mongodb://localhost:3001")
+            self.db = self.client.meteor
 
-    @staticmethod
-    def get_symbols() -> dict:
+        else:
+            self.client = MongoClient("mongodb://localhost:27017")
+            self.db = self.client.stock
+
+    def get_symbols(self) -> dict:
         symbols = {}
-        col = db.instruments
+        col = self.db.instruments
         # resultss = col.find()
         for result in col.find():
             symbols[result['symbol']] = result
@@ -69,7 +85,7 @@ class UpdateMongo(object):
             return rgn_quote
 
     def update_regional_quote(self, data: np.array) -> None:
-        col = db.quotes
+        col = self.db.quotes
         dic = self._process_regional_quote(data)
         if dic:
             # print(dic)
@@ -153,13 +169,16 @@ class UpdateMongo(object):
         return dt
 
     def update_quote(self, data: np.array) -> None:
-        col = db.quotes
+        col = self.db.quotes
         dic = self._process_quote(data)
+        symbol = dic['symbol']
+        if symbol == 'TOPS':
+            return
         if dic:
             # print(dic)
             keys = list(dic.keys())
             new_dic = {}
-            old = col.find_one({'symbol': dic['symbol']})
+            old = col.find_one({'symbol': symbol})
             # print(old)
             if not old:
                 old = {}
@@ -201,17 +220,39 @@ class UpdateMongo(object):
             # bar['vol'] = fields[7]
             return bar
 
-    def update_bars(self, data: np.array) -> None:
+    def update_bars(self, data: np.array, history=False) -> None:
+
         col = db.bars
         dic = self._process_bars(data)
         symbol = dic['symbol']
+        if symbol == 'TOPS':
+            return
         del dic['symbol']
-        old = col.find_one({'symbol': symbol})
-        if not old:
-            old = {
-                'bars': [],
-                'symbol': symbol
-            }
+        default_old = {
+            'bars': [],
+            'symbol': symbol
+        }
+
+        # used to update the mongo when history bars has done, but
+        # no live bars are coming (in after hours)
+        def update_history_bars_after_done(*args):
+            temp = self.cache['bars'].get(symbol, default_old)
+            if temp['bars']:
+                col.update_one(
+                    {'symbol': symbol},
+                    {
+                        "$set": old,
+                    },
+                    True
+                )
+                self.cache['bars'][symbol] = default_old
+
+        if not history:
+            old = self.cache['bars'].get(symbol, default_old)
+            if not old['bars']:
+                old = col.find_one({'symbol': symbol})
+        else:
+            old = self.cache['bars'].get(symbol, default_old)
 
         if len(old['bars']) > 0 and old['bars'][-1]['date'] == dic['date']:
             old['bars'][-1] = dic
@@ -226,23 +267,40 @@ class UpdateMongo(object):
 
         # print(old)
 
-        def getKey(item):
-            return item['date']
+        # def get_key(item):
+        #     return item['date']
 
-        sorted(old['bars'], key=getKey)
+        sorted(old['bars'], key=lambda item: item['date'])
+
         old['bars'] = old['bars'][-look_back_bars:]
+
         # print(old['bars'])
-        result = col.update_one(
-            {'symbol': symbol},
-            {
-                "$set": old,
-            },
-            True
-        )
+        if not history or (len(self.cache['bars'].get(symbol, default_old)['bars']) == look_back_bars):
+            result = col.update_one(
+                {'symbol': symbol},
+                {
+                    "$set": old,
+                },
+                True
+            )
+            # print(len(old['bars']))
+            # print(result, symbol, 'mongo updated')
+
+            # clear the cache
+            self.cache['bars'][symbol] = default_old
+        else:
+            self.cache['bars'][symbol] = old
+
+            # for line in self.cache['bars'][symbol]['bars']:
+            #     # print(line)
+            # print(len(self.cache['bars'][symbol]['bars']))
+
+            # used to update the mongo when history bars has done, but
+            # no live bars are coming (in after hours)
+        set_timeout(update_history_bars_after_done, 2)
 
     def clear_cache(self, data: np.array) -> None:
-        col = db.bars
-        dic = self._process_bars(data)
+        pass
 
 
 update_mongo = UpdateMongo()
@@ -390,18 +448,19 @@ class MyBarListener(VerboseIQFeedListener):
 
     def __init__(self, name: str):
         super().__init__(name)
+        self.update_mongo = UpdateMongo()
 
     def process_latest_bar_update(self, bar_data: np.array) -> None:
         # print("%s: Process latest bar update:" % self._name)
         # print(bar_data)
-        update_mongo.update_bars(bar_data)
+        self.update_mongo.update_bars(bar_data)
         data = bar_data[0]
         if not is_server() and verbose:
             print("%s: Process latest bar update:" % self._name)
             print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
 
     def process_live_bar(self, bar_data: np.array) -> None:
-        update_mongo.update_bars(bar_data)
+        self.update_mongo.update_bars(bar_data)
         if not is_server() and verbose:
             print("%s: Process live bar:" % self._name)
             # print(bar_data)
@@ -414,14 +473,14 @@ class MyBarListener(VerboseIQFeedListener):
         # print(bar_data)
         data = bar_data[0]
         key = "{}:{}:{}".format(data[0], data[1], data[2])
-        if key not in history_cache or (key in history_cache and history_cache[key] != data[2]):
-            # print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
-            update_mongo.update_bars(bar_data)
-            history_cache[key] = data[2]
-        else:
-            if not is_server() and verbose:
-                # print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
-                print('in cache')
+        # if key not in history_cache or (key in history_cache and history_cache[key] != data[2]):
+        # print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
+        self.update_mongo.update_bars(bar_data, history=True)
+        #     history_cache[key] = data[2]
+        # else:
+        #     if not is_server() and verbose:
+        #         # print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
+        #         print('in cache')
 
     def process_invalid_symbol(self, bad_symbol: str) -> None:
         if not is_server() and verbose:
@@ -448,7 +507,7 @@ def get_level_1_quotes_and_trades(ticker: str, seconds: int):
     quote_listener = MyQuoteListener("{} Level 1 Listener".format(ticker))
     quote_conn.add_listener(quote_listener)
     print('get_level_1_quotes_and_trades ' + ticker)
-
+    mongo_conn = UpdateMongo()
     with iq.ConnConnector([quote_conn]) as connector:
         all_fields = sorted(list(iq.QuoteConn.quote_msg_map.keys()))
         quote_conn.select_update_fieldnames(all_fields)
@@ -478,7 +537,7 @@ def get_level_1_quotes_and_trades(ticker: str, seconds: int):
             # quote_conn.read_message()
 
             time.sleep(3)
-            stocks = update_mongo.get_symbols()
+            stocks = mongo_conn.get_symbols()
             if ticker in stocks and not stocks[ticker]['auto'].get('lv1', 0):
                 print('unwatch lv1', ticker)
                 break
@@ -519,12 +578,13 @@ def get_live_interval_bars(ticker: str, bar_len: int, seconds: int):
     bar_listener = MyBarListener("{} Bar Listener".format(ticker))
     bar_conn.add_listener(bar_listener)
     print('get_live_interval_bars ' + ticker)
+    mongo_conn = UpdateMongo()
 
     with iq.ConnConnector([bar_conn]) as connector:
         bar_conn.watch(symbol=ticker, interval_len=bar_len,
                        interval_type='s', update=1, lookback_bars=look_back_bars)
         while 1:
-            stocks = update_mongo.get_symbols()
+            stocks = mongo_conn.get_symbols()
             if ticker in stocks and \
                     (not stocks[ticker]['auto'].get('chart', 0)
                      or stocks[ticker]['auto'].get('chart_inv', 0) != bar_len):
@@ -533,6 +593,8 @@ def get_live_interval_bars(ticker: str, bar_len: int, seconds: int):
                 print('unwatch bar', ticker, bar_len)
                 return
             time.sleep(seconds)
+
+
 # def unwatch_live_interval_bar
 
 def get_administrative_messages(seconds: int):
@@ -820,6 +882,10 @@ def get_news():
         print("Number of news stories in last week for AAPL, IBM and TSLA:")
         print(counts)
         print("")
+
+
+def combine_name(p: str, n: str) -> str:
+    return "{}:{}".format(p, n)
 
 
 if __name__ == "__main__":
