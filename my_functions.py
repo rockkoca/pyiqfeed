@@ -132,8 +132,8 @@ class UpdateMongo(object):
             rgn_quote['last'] = str(fields[22])
             rgn_quote['high'] = str(fields[31])
             rgn_quote['low'] = str(fields[37])
-            rgn_quote['tick_vol'] = int(fields[31])
-            rgn_quote['volume'] = int(fields[31])
+            rgn_quote['tick_vol'] = int(fields[35])
+            rgn_quote['volume'] = int(fields[65])
             rgn_quote['tick'] = int(fields[64])
 
             dt = iq.field_readers.read_ccyymmdd(str(fields[43]).replace('-', ''))
