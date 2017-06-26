@@ -5,7 +5,7 @@ import warnings
 from enum import Enum
 
 import requests
-import exceptions as RH_exception
+# import exceptions as RH_exception
 from urllib.request import getproxies
 from urllib.parse import unquote
 
@@ -60,6 +60,8 @@ class Robinhood(object):
         "watchlists": "https://api.robinhood.com/watchlists/",
         "news": "https://api.robinhood.com/midlands/news/",
         "fundamentals": "https://api.robinhood.com/fundamentals/",
+        'sp500_up': 'https://api.robinhood.com/midlands/movers/sp500/?direction=up',
+        'sp500_down': 'https://api.robinhood.com/midlands/movers/sp500/?direction=down',
     }
 
     session = None
@@ -555,7 +557,7 @@ class Robinhood(object):
     def portfolios(self):
         """Returns the user's portfolio data."""
         req = self.session.get(self.endpoints['portfolios'])
-        # req.raise_for_status()
+        req.raise_for_status()
         return req.json()['results'][0]
 
     def adjusted_equity_previous_close(self):
@@ -654,6 +656,12 @@ class Robinhood(object):
 
     def url(self, url) -> dict:
         return self.session.get(url=url).json()
+
+    def sp500_up(self) -> dict:
+        return self.session.get(self.endpoints['sp500_up']).json()
+
+    def sp500_down(self) -> dict:
+        return self.session.get(self.endpoints['sp500_down']).json()
 
     ##############################
     # POSITIONS DATA
@@ -817,3 +825,22 @@ class Robinhood(object):
         """
         transaction = Transaction.SELL
         return self.place_order(instrument=instrument, quantity=quantity, price=price, transaction=transaction)
+
+
+
+"""exceptions: custom exceptions for library"""
+
+
+class RobinhoodException(Exception):
+    """wrapper for custom Robinhood library exceptions"""
+    pass
+
+
+class LoginFailed(RobinhoodException):
+    """Unable to login to robinhood"""
+    pass
+
+
+class TwoFactorRequired(LoginFailed):
+    """Unable to login thanks to 2FA failure"""
+    pass

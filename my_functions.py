@@ -41,12 +41,14 @@ def set_interval(func, sec):
     return t
 
 
+launch_service_lock = False
+
+
 def relaunch_service():
     for i in range(10):
         subprocess.call('killall winedevice.exe', shell=True)
         subprocess.call('killall iqconnect.exe', shell=True)
-        
-    time.sleep(2)
+
     launch_service()
 
 
@@ -59,9 +61,12 @@ def check_connection():
         quote_conn.disconnect()
         # print('connection is healthy')
     except Exception as e:
-        time.sleep(2)
         # if str(e).startswith('[Errno'):
-        relaunch_service()
+        if not launch_service_lock:
+            launch_service_lock = True
+            relaunch_service()
+        time.sleep(15)
+        launch_service_lock = False
 
 
 def is_server() -> bool:
@@ -319,28 +324,19 @@ class UpdateMongo(object):
             old['bars'][-1] = ndarray
 
         else:
-            # while old['bars'] and old['bars'][-1]['date'] > dic['date']:
-            #     old['bars'].pop()
-            if len(old['bars']) == 0 and int(old['bars'][0][0]) > int(ndarray[0]):
+
+            # new bars
+            if len(old['bars']) == 0 or int(old['bars'][0][-1]) > int(ndarray[0]):
                 old['bars'] = ndarray.reshape(ndarray.shape[0], -1)
 
-            elif int(old['bars'][0][0]) == int(ndarray[0]):
+            elif old['bars'][0][-1] == ndarray[0]:  # update latest bar
                 for i, row in enumerate(old['bars']):
                     row[-1] = ndarray[i]
-            else:
+            else:  # append new bar
                 old['bars'] = np.append(old['bars'], ndarray.reshape(ndarray.shape[0], -1), axis=1)
-                # try:
-                #     assert float(old['bars'][2][-1]) >= float(old['bars'][3][-1])
-                # except Exception as e:
-                #     # print(old['bars'])
-                #     print(ndarray)
-                #     print(ndarray.reshape(ndarray.shape[0], -1))
-                #     raise Exception('ND CONVERT WRONG')
-                #     # col.insert(
-                #     #     old
-                #     # )
 
-        sorted(old['bars'], key=lambda item: item[0])
+        if history:  # the history bars may come without order
+            sorted(old['bars'], key=lambda item: item[0])
 
         old['bars'] = old['bars'][-look_back_bars:]
 
@@ -361,7 +357,7 @@ class UpdateMongo(object):
 
             # used to update the mongo when history bars has done, but
             # no live bars are coming (in after hours)
-        if dt.datetime.today().weekday() > 4 or 16 < dt.datetime.now().hour or dt.datetime.now().hour < 5:
+        if dt.datetime.today().weekday() > 4 or 16 <= dt.datetime.now().hour or dt.datetime.now().hour < 5:
             set_timeout(1, update_history_bars_after_done)
 
     def clear_cache(self, data: np.array) -> None:

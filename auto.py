@@ -1,8 +1,12 @@
 #! /usr/bin/env python3
 # coding=utf-8
 from my_functions import *
+import robinhood.Robinhood as RB
+from robinhood.credentials import *
 import concurrent.futures
 import multiprocessing
+import ujson
+from get_stocks import *
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run pyiqfeed example code")
@@ -30,26 +34,24 @@ if __name__ == "__main__":
                         help="News related stuff")
     results = parser.parse_args()
 
-    launch_service()
-    # print(results)
-    # get_level_1_quotes_and_trades(ticker="AMD", seconds=1)
-    # get_tickdata(ticker="AMD", max_ticks=10000, num_days=4)
-    # get_historical_bar_data(ticker="AMD",
-    #                             bar_len=60,
-    #                             bar_unit='s',
-    #                             num_bars=100)
-    # get_daily_data(ticker="AMD", num_days=10)
-    # get_live_interval_bars(ticker="AMD", bar_len=600, seconds=30)
+    # launch_service()
 
     # We can use a with statement to ensure threads are cleaned up promptly
     # TODO Fix MongoClient opened before fork. Create MongoClient
-    set_interval(check_connection, 3)
+    # set_interval(check_connection, 3)
     pool = {}
-    update_mongo = UpdateMongo()
-    stocks = update_mongo.get_symbols()
+    # update_mongo = UpdateMongo()
+    # stocks = update_mongo.get_symbols()
     chart_invs = {
 
     }
+
+    # get sp500 stocks
+    stocks = get_sp500()
+
+    trader = RB.Robinhood()
+    trader.login(username=Credential.get_username(), password=Credential.get_password())
+
     if multiprocessing.cpu_count() > 200:
         pool_executor = concurrent.futures.ProcessPoolExecutor(max_workers=len(stocks) * 5)
         print('Using multi process', multiprocessing.cpu_count(), 'cores')
@@ -58,20 +60,12 @@ if __name__ == "__main__":
         print('Using multi threading', multiprocessing.cpu_count(), 'cores')
 
     with pool_executor as executor:
-        executor.submit(get_administrative_messages, 1)
+        # executor.submit(get_administrative_messages, 1)
 
 
         def launch_futures(future_name: str, real=True, **kwargs) -> None:
             # global stocks
             # stocks = update_mongo.get_symbols()
-
-            # used to keep the connection
-            stocks['TOPS'] = {
-                'auto': {
-                    'chart': 1,
-                    'chart_inv': 300
-                }
-            }
 
             def stop():
                 if future_name in pool and pool[future_name].running():
@@ -92,12 +86,12 @@ if __name__ == "__main__":
                 if stocks[name]['auto'].get('chart', 0):
                     update_inv = False
                     bar_len = stocks[name]['auto'].get('chart_inv', 30)
-                    last_bar_len = chart_invs.get(future_name, 0)
-                    if bar_len != chart_invs.get(future_name, 0):
-                        if chart_invs.get(future_name, 0):
-                            print("unwatch {} @ {}".format(name, chart_invs.get(future_name, bar_len)))
-                        update_inv = True
-                        chart_invs[future_name] = bar_len
+                    # last_bar_len = chart_invs.get(future_name, 0)
+                    # if bar_len != chart_invs.get(future_name, 0):
+                    #     if chart_invs.get(future_name, 0):
+                    #         print("unwatch {} @ {}".format(name, chart_invs.get(future_name, bar_len)))
+                    #     update_inv = True
+                    #     chart_invs[future_name] = bar_len
 
                     # print(stocks[name])
                     if update_inv or future_name not in pool or not pool[future_name].running():
@@ -124,10 +118,6 @@ if __name__ == "__main__":
                 print(pre, 'what the hell is this?????')
                 pass
 
-
-        launch_futures('bar:TOPS')  # KEEP A RUNNING CONNECTION
-        launch_futures('bar:TOPS')  # KEEP A RUNNING CONNECTION
-
         while 1:
             # launch_service()
             # print(results)
@@ -135,16 +125,16 @@ if __name__ == "__main__":
 
             for stock in stocks.keys():
                 bar = combine_name('bar', stock)
-                launch_futures(bar, stocks[stock]['auto'].get('chart', 0), bar_len=60)
+                launch_futures(bar, True, bar_len=60)
 
-                lv1 = combine_name('lv1', stock)
-                launch_futures(lv1, stocks[stock]['auto'].get('chart', 0))
+                # lv1 = combine_name('lv1', stock)
+                # launch_futures(lv1, True)
             time_cost = 0
             counter = 0
             limit = 50
             start = time.time()
             while 1:
-                stocks = update_mongo.get_symbols()
+                # stocks = update_mongo.get_symbols()
                 for key, future in pool.items():
                     # if not future.running():
                     # check if user changed the status of the char or lvs
