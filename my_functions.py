@@ -18,15 +18,43 @@ from passwords import dtn_product_id, dtn_login, dtn_password
 from pyiqfeed import *
 from pymongo import MongoClient
 import threading
+import datetime as dt
+import subprocess
 
 verbose = 0
 look_back_bars = 480
 
 
-def set_timeout(func: object, sec: int) -> threading.Timer:
-    t = threading.Timer(sec, func)
+def set_timeout(sec: float, func: object, *args, **kwargs) -> threading.Timer:
+    t = threading.Timer(sec, func, *args, **kwargs)
     t.start()
     return t
+
+
+def set_interval(func, sec):
+    def func_wrapper():
+        set_interval(func, sec)
+        func()
+
+    t = threading.Timer(sec, func_wrapper)
+    t.start()
+    return t
+
+
+def check_connection():
+    try:
+        # if key == 'bar:TOPS' and future.running():
+        #     print(key, future.running())
+        quote_conn = iq.QuoteConn(name="test connection")
+        quote_conn.connect()
+        quote_conn.disconnect()
+        # print('connection is healthy')
+    except Exception as e:
+        time.sleep(2)
+        if str(e).startswith('[Errno'):
+            subprocess.call('killall iqconnect.exe', shell=True)
+            launch_service()
+        launch_service()
 
 
 def is_server() -> bool:
@@ -217,6 +245,7 @@ class UpdateMongo(object):
             # bar['close'] = fields[6]
             # bar['volume'] = str(fields[8])
             # bar['vol'] = fields[7]
+            assert fields[4] >= fields[5]
             return fields[0].decode('ascii'), \
                    np.array(
                        [
@@ -253,14 +282,19 @@ class UpdateMongo(object):
         def update_history_bars_after_done(*args):
             temp = self.cache['bars'].get(name, default_old)
             update_mongo_time = self.cache['update_mongo_time'].get(name, '0')
+
+            # date + vol, vol is changing even if date is not changing
             current_data_time = temp['bars'][0][-1] + temp['bars'][-1][-1] if len(temp['bars']) else '0'
 
             if len(temp['bars']) > 0 and update_mongo_time != current_data_time:
-                temp['bars'] = temp['bars'].tolist() if type(temp['bars']) == np.ndarray else temp['bars']
+                # temp['bars'] = temp['bars'].tolist()
+
                 col.update_one(
                     {'symbol': symbol},
                     {
-                        "$set": temp,
+                        "$set": {
+                            'bars': temp['bars'].tolist()
+                        },
                     },
                     True
                 )
@@ -281,12 +315,19 @@ class UpdateMongo(object):
             # while old['bars'] and old['bars'][-1]['date'] > dic['date']:
             #     old['bars'].pop()
             if len(old['bars']) == 0:
-                old['bars'] = np.reshape(ndarray, (ndarray.shape[0], 1))
+                old['bars'] = ndarray.reshape(ndarray.shape[0], -1)
             else:
-                old['bars'] = np.append(old['bars'], np.reshape(ndarray, (ndarray.shape[0], 1)), axis=1)
-                # col.insert(
-                #     old
-                # )
+                old['bars'] = np.append(old['bars'], ndarray.reshape(ndarray.shape[0], -1), axis=1)
+                # try:
+                #     assert float(old['bars'][2][-1]) >= float(old['bars'][3][-1])
+                # except Exception as e:
+                #     # print(old['bars'])
+                #     print(ndarray)
+                #     print(ndarray.reshape(ndarray.shape[0], -1))
+                #     raise Exception('ND CONVERT WRONG')
+                #     # col.insert(
+                #     #     old
+                #     # )
 
         sorted(old['bars'], key=lambda item: item[0])
 
@@ -308,7 +349,8 @@ class UpdateMongo(object):
 
             # used to update the mongo when history bars has done, but
             # no live bars are coming (in after hours)
-        set_timeout(update_history_bars_after_done, 2)
+        if dt.datetime.today().weekday() > 4 or dt.datetime.now().hour > 16:
+            set_timeout(1, update_history_bars_after_done)
 
     def clear_cache(self, data: np.array) -> None:
         pass
