@@ -42,8 +42,11 @@ def set_interval(func, sec):
 
 
 def relaunch_service():
-    subprocess.call('killall winedevice.exe', shell=True)
-    subprocess.call('killall iqconnect.exe', shell=True)
+    for i in range(10):
+        subprocess.call('killall winedevice.exe', shell=True)
+        subprocess.call('killall iqconnect.exe', shell=True)
+
+    time.sleep(2)
     launch_service()
 
 
