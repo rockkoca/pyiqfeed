@@ -321,8 +321,12 @@ class UpdateMongo(object):
         else:
             # while old['bars'] and old['bars'][-1]['date'] > dic['date']:
             #     old['bars'].pop()
-            if len(old['bars']) == 0:
+            if len(old['bars']) == 0 and int(old['bars'][0][0]) > int(ndarray[0]):
                 old['bars'] = ndarray.reshape(ndarray.shape[0], -1)
+
+            elif int(old['bars'][0][0]) == int(ndarray[0]):
+                for i, row in enumerate(old['bars']):
+                    row[-1] = ndarray[i]
             else:
                 old['bars'] = np.append(old['bars'], ndarray.reshape(ndarray.shape[0], -1), axis=1)
                 # try:
@@ -344,6 +348,7 @@ class UpdateMongo(object):
         if not history and update_meteor:
             # old['bars'] = old['bars'].tolist()
             update_history_bars_after_done()
+
 
             # clear the cache
             # self.cache['bars'][name] = default_old
