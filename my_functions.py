@@ -356,7 +356,7 @@ class UpdateMongo(object):
 
             # used to update the mongo when history bars has done, but
             # no live bars are coming (in after hours)
-        if dt.datetime.today().weekday() > 4 or 16 < dt.datetime.now().hour < 5:
+        if dt.datetime.today().weekday() > 4 or 16 < dt.datetime.now().hour or dt.datetime.now().hour < 5:
             set_timeout(1, update_history_bars_after_done)
 
     def clear_cache(self, data: np.array) -> None:
