@@ -41,6 +41,12 @@ def set_interval(func, sec):
     return t
 
 
+def relaunch_service():
+    subprocess.call('killall winedevice.exe', shell=True)
+    subprocess.call('killall iqconnect.exe', shell=True)
+    launch_service()
+
+
 def check_connection():
     try:
         # if key == 'bar:TOPS' and future.running():
@@ -52,9 +58,7 @@ def check_connection():
     except Exception as e:
         time.sleep(2)
         # if str(e).startswith('[Errno'):
-        subprocess.call('killall winedevice.exe', shell=True)
-        subprocess.call('killall iqconnect.exe', shell=True)
-        launch_service()
+        relaunch_service()
 
 
 def is_server() -> bool:
@@ -496,6 +500,10 @@ class MyBarListener(VerboseIQFeedListener):
 
     """
 
+    def feed_is_stale(self) -> None:
+        super().feed_is_stale()
+        relaunch_service()
+
     def __init__(self, name: str):
         super().__init__(name)
         self.update_mongo = UpdateMongo()
@@ -667,7 +675,7 @@ def get_tickdata(ticker: str, max_ticks: int, num_days: int):
     """Show how to read tick-data"""
 
     hist_conn = iq.HistoryConn(name="pyiqfeed-Example-tickdata")
-    hist_listener = iq.VerboseIQFeedListener("History Tick Listener")
+    hist_listener = iq.MyBarListener("History Tick Listener")
     hist_conn.add_listener(hist_listener)
 
     # Look at conn.py for request_ticks, request_ticks_for_days and
@@ -722,7 +730,7 @@ def get_historical_bar_data(ticker: str, bar_len: int, bar_unit: str,
                             num_bars: int):
     """Shows how to get interval bars."""
     hist_conn = iq.HistoryConn(name="pyiqfeed-Example-historical-bars")
-    hist_listener = iq.VerboseIQFeedListener("History Bar Listener")
+    hist_listener = iq.MyBarListener("History Bar Listener")
     hist_conn.add_listener(hist_listener)
 
     with iq.ConnConnector([hist_conn]) as connector:
@@ -762,7 +770,7 @@ def get_historical_bar_data(ticker: str, bar_len: int, bar_unit: str,
 def get_daily_data(ticker: str, num_days: int):
     """Historical Daily Data"""
     hist_conn = iq.HistoryConn(name="pyiqfeed-Example-daily-data")
-    hist_listener = iq.VerboseIQFeedListener("History Bar Listener")
+    hist_listener = iq.MyBarListener("History Bar Listener")
     hist_conn.add_listener(hist_listener)
 
     with iq.ConnConnector([hist_conn]) as connector:
@@ -776,7 +784,7 @@ def get_daily_data(ticker: str, num_days: int):
 def get_reference_data():
     """Markets, SecTypes, Trade Conditions etc"""
     table_conn = iq.TableConn(name="pyiqfeed-Example-reference-data")
-    table_listener = iq.VerboseIQFeedListener("Reference Data Listener")
+    table_listener = iq.MyBarListener("Reference Data Listener")
     table_conn.add_listener(table_listener)
     with iq.ConnConnector([table_conn]) as connector:
         table_conn.update_tables()
@@ -805,7 +813,7 @@ def get_reference_data():
 def get_ticker_lookups(ticker: str):
     """Lookup tickers."""
     lookup_conn = iq.LookupConn(name="pyiqfeed-Example-Ticker-Lookups")
-    lookup_listener = iq.VerboseIQFeedListener("TickerLookupListener")
+    lookup_listener = iq.MyBarListener("TickerLookupListener")
     lookup_conn.add_listener(lookup_listener)
 
     with iq.ConnConnector([lookup_conn]) as connector:
@@ -830,7 +838,7 @@ def get_ticker_lookups(ticker: str):
 def get_equity_option_chain(ticker: str):
     """Equity Option Chains"""
     lookup_conn = iq.LookupConn(name="pyiqfeed-Example-Eq-Option-Chain")
-    lookup_listener = iq.VerboseIQFeedListener("EqOptionListener")
+    lookup_listener = iq.MyBarListener("EqOptionListener")
     lookup_conn.add_listener(lookup_listener)
     with iq.ConnConnector([lookup_conn]) as connector:
         # noinspection PyArgumentEqualDefault
@@ -850,7 +858,7 @@ def get_equity_option_chain(ticker: str):
 def get_futures_chain(ticker: str):
     """Futures chain"""
     lookup_conn = iq.LookupConn(name="pyiqfeed-Example-Futures-Chain")
-    lookup_listener = iq.VerboseIQFeedListener("FuturesChainLookupListener")
+    lookup_listener = iq.MyBarListener("FuturesChainLookupListener")
     lookup_conn.add_listener(lookup_listener)
     with iq.ConnConnector([lookup_conn]) as connector:
         f_syms = lookup_conn.request_futures_chain(
@@ -867,7 +875,7 @@ def get_futures_chain(ticker: str):
 def get_futures_spread_chain(ticker: str):
     """Futures spread chain"""
     lookup_conn = iq.LookupConn(name="pyiqfeed-Example-Futures-Spread-Lookup")
-    lookup_listener = iq.VerboseIQFeedListener("FuturesSpreadLookupListener")
+    lookup_listener = iq.MyBarListener("FuturesSpreadLookupListener")
     lookup_conn.add_listener(lookup_listener)
     with iq.ConnConnector([lookup_conn]) as connector:
         f_syms = lookup_conn.request_futures_spread_chain(
@@ -884,7 +892,7 @@ def get_futures_spread_chain(ticker: str):
 def get_futures_options_chain(ticker: str):
     """Futures Option Chain"""
     lookup_conn = iq.LookupConn(name="pyiqfeed-Example-Futures-Options-Chain")
-    lookup_listener = iq.VerboseIQFeedListener("FuturesOptionLookupListener")
+    lookup_listener = iq.MyBarListener("FuturesOptionLookupListener")
     lookup_conn.add_listener(lookup_listener)
     with iq.ConnConnector([lookup_conn]) as connector:
         f_syms = lookup_conn.request_futures_option_chain(
@@ -902,7 +910,7 @@ def get_futures_options_chain(ticker: str):
 def get_news():
     """Exercise NewsConn functionality"""
     news_conn = iq.NewsConn("pyiqfeed-example-News-Conn")
-    news_listener = iq.VerboseIQFeedListener("NewsListener")
+    news_listener = iq.MyBarListener("NewsListener")
     news_conn.add_listener(news_listener)
 
     with iq.ConnConnector([news_conn]) as connector:

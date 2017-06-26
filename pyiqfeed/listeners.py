@@ -445,6 +445,7 @@ class VerboseIQFeedListener:
             # TODO deal with feed disconnected. This may cause the iqfeed stop working
             # DRYS is a background feed in order to keep the socket running
             pass
+
         print("%s: Feed Disconnected" % self._name)
 
     def feed_is_fresh(self) -> None:
