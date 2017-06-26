@@ -142,8 +142,8 @@ if __name__ == "__main__":
             time_cost = 0
             counter = 0
             limit = 20
+            start = time.time()
             while 1:
-                start = time.time()
                 stocks = update_mongo.get_symbols()
                 for key, future in pool.items():
                     # if not future.running():
@@ -196,6 +196,7 @@ if __name__ == "__main__":
                     print('each loop used {} seconds'.format(time_cost / limit - .5))
                     counter = 0
                     time_cost = 0
+                    start = time.time()
                 time.sleep(.5)
                 # concurrent.futures.
                 # for future in concurrent.futures.as_completed(pool):
