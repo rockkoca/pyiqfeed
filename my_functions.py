@@ -9,9 +9,7 @@ library functionality is used in this file. Look at conn.py and listeners.py
 for more details.
 """
 import sys
-import signal
 import argparse
-import datetime
 import pyiqfeed as iq
 import numpy as np
 from typing import Sequence
@@ -47,7 +45,8 @@ else:
 class UpdateMongo(object):
     def __init__(self):
         self.cache = {
-            'bars': {}
+            'bars': {},
+            'update_mongo_time': {}
         }
         if sys.platform == 'darwin':
             self.client = MongoClient("mongodb://localhost:3001")
@@ -204,92 +203,104 @@ class UpdateMongo(object):
             )
             # print(result)
 
-    def _process_bars(self, data: np.array) -> dict:
+    def _process_bars(self, data: np.array) -> tuple:
         if len(data) == 0:
-            return {}
+            return '', np.array([])
         else:
             fields = data[0]
             bar = dict()
-            bar["symbol"] = fields[0].decode('ascii')
-            bar['date'] = str(int(self.tick_time(fields[1], fields[2]).timestamp())) + '000'
-            bar['open'] = fields[3]
-            bar['high'] = fields[4]
-            bar['low'] = fields[5]
-            bar['close'] = fields[6]
-            bar['volume'] = str(fields[8])
+            # bar["symbol"] = fields[0].decode('ascii')
+            # bar['date'] = str(int(self.tick_time(fields[1], fields[2]).timestamp())) + '000'
+            # bar['open'] = fields[3]
+            # bar['high'] = fields[4]
+            # bar['low'] = fields[5]
+            # bar['close'] = fields[6]
+            # bar['volume'] = str(fields[8])
             # bar['vol'] = fields[7]
-            return bar
+            return fields[0].decode('ascii'), \
+                   np.array(
+                       [
+                           str(int(self.tick_time(fields[1], fields[2]).timestamp())) + '000',
+                           fields[3],  # open
+                           fields[4],  # high
+                           fields[5],  # low
+                           fields[6],  # close
+                           str(fields[8]),  # volume
+                       ]
+                   )
 
-    def update_bars(self, data: np.array, history=False) -> None:
-
+    def update_bars(self, data: np.array, name: str, history=False) -> None:
+        col_ins = db.instruments
         col = db.bars
-        dic = self._process_bars(data)
-        symbol = dic['symbol']
-        if symbol == 'TOPS':
-            return
-        del dic['symbol']
+        symbol, ndarray = self._process_bars(data)
+        # symbol = dic['symbol']
+        info = name.split('-')
+        assert symbol == info[0]
+
+        instrument = col_ins.find_one({'symbol': symbol})
+
+        update_meteor = (not not instrument) or (instrument and
+                                                 info and instrument['auto'].get('chart_inv', 0) != int(info[1]))
+
         default_old = {
-            'bars': [],
-            'symbol': symbol
+            'bars': np.array([]),
+            'symbol': symbol,
+            'name': name,
         }
 
         # used to update the mongo when history bars has done, but
         # no live bars are coming (in after hours)
         def update_history_bars_after_done(*args):
-            temp = self.cache['bars'].get(symbol, default_old)
-            if temp['bars']:
+            temp = self.cache['bars'].get(name, default_old)
+            update_mongo_time = self.cache['update_mongo_time'].get(name, '0')
+            current_data_time = temp['bars'][0][-1] + temp['bars'][-1][-1] if len(temp['bars']) else '0'
+
+            if len(temp['bars']) > 0 and update_mongo_time != current_data_time:
+                temp['bars'] = temp['bars'].tolist() if type(temp['bars']) == np.ndarray else temp['bars']
                 col.update_one(
                     {'symbol': symbol},
                     {
-                        "$set": old,
+                        "$set": temp,
                     },
                     True
                 )
-                self.cache['bars'][symbol] = default_old
+                self.cache['update_mongo_time'][name] = current_data_time
+                # self.cache['bars'][name] = default_old
 
-        if not history:
-            old = self.cache['bars'].get(symbol, default_old)
-            if not old['bars']:
-                old = col.find_one({'symbol': symbol})
-        else:
-            old = self.cache['bars'].get(symbol, default_old)
+        # if not history:
+        old = self.cache['bars'].get(name, default_old)
+        # if len(old['bars']) == 0:
+        #     old = col.find_one({'symbol': symbol})
+        # else:
+        #     old = self.cache['bars'].get(name, default_old)
 
-        if len(old['bars']) > 0 and old['bars'][-1]['date'] == dic['date']:
-            old['bars'][-1] = dic
+        if len(old['bars']) > 0 and old['bars'][-1][0] == ndarray[0]:
+            old['bars'][-1] = ndarray
 
         else:
             # while old['bars'] and old['bars'][-1]['date'] > dic['date']:
             #     old['bars'].pop()
-            old['bars'].append(dic)
-            # col.insert(
-            #     old
-            # )
+            if len(old['bars']) == 0:
+                old['bars'] = np.reshape(ndarray, (ndarray.shape[0], 1))
+            else:
+                old['bars'] = np.append(old['bars'], np.reshape(ndarray, (ndarray.shape[0], 1)), axis=1)
+                # col.insert(
+                #     old
+                # )
 
-        # print(old)
-
-        # def get_key(item):
-        #     return item['date']
-
-        sorted(old['bars'], key=lambda item: item['date'])
+        sorted(old['bars'], key=lambda item: item[0])
 
         old['bars'] = old['bars'][-look_back_bars:]
 
         # print(old['bars'])
-        if not history or (len(self.cache['bars'].get(symbol, default_old)['bars']) == look_back_bars):
-            result = col.update_one(
-                {'symbol': symbol},
-                {
-                    "$set": old,
-                },
-                True
-            )
-            # print(len(old['bars']))
-            # print(result, symbol, 'mongo updated')
+        if not history and update_meteor:
+            # old['bars'] = old['bars'].tolist()
+            update_history_bars_after_done()
 
             # clear the cache
-            self.cache['bars'][symbol] = default_old
+            # self.cache['bars'][name] = default_old
         else:
-            self.cache['bars'][symbol] = old
+            self.cache['bars'][name] = old
 
             # for line in self.cache['bars'][symbol]['bars']:
             #     # print(line)
@@ -301,9 +312,6 @@ class UpdateMongo(object):
 
     def clear_cache(self, data: np.array) -> None:
         pass
-
-
-update_mongo = UpdateMongo()
 
 
 def launch_service():
@@ -453,14 +461,14 @@ class MyBarListener(VerboseIQFeedListener):
     def process_latest_bar_update(self, bar_data: np.array) -> None:
         # print("%s: Process latest bar update:" % self._name)
         # print(bar_data)
-        self.update_mongo.update_bars(bar_data)
+        self.update_mongo.update_bars(bar_data, name=self._name)
         data = bar_data[0]
         if not is_server() and verbose:
             print("%s: Process latest bar update:" % self._name)
             print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
 
     def process_live_bar(self, bar_data: np.array) -> None:
-        self.update_mongo.update_bars(bar_data)
+        self.update_mongo.update_bars(bar_data, name=self._name)
         if not is_server() and verbose:
             print("%s: Process live bar:" % self._name)
             # print(bar_data)
@@ -475,7 +483,7 @@ class MyBarListener(VerboseIQFeedListener):
         key = "{}:{}:{}".format(data[0], data[1], data[2])
         # if key not in history_cache or (key in history_cache and history_cache[key] != data[2]):
         # print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
-        self.update_mongo.update_bars(bar_data, history=True)
+        self.update_mongo.update_bars(bar_data, name=self._name, history=True)
         #     history_cache[key] = data[2]
         # else:
         #     if not is_server() and verbose:
@@ -575,9 +583,9 @@ def get_trades_only(ticker: str, seconds: int):
 def get_live_interval_bars(ticker: str, bar_len: int, seconds: int):
     """Get real-time interval bars"""
     bar_conn = iq.BarConn(name='{} pyiqfeed-Example-interval-bars'.format(ticker))
-    bar_listener = MyBarListener("{} Bar Listener".format(ticker))
+    bar_listener = MyBarListener("{}-{}-bar-listener".format(ticker, bar_len))
     bar_conn.add_listener(bar_listener)
-    print('get_live_interval_bars ' + ticker)
+    print('get_live_interval_bars {}@{}'.format(ticker, bar_len))
     mongo_conn = UpdateMongo()
 
     with iq.ConnConnector([bar_conn]) as connector:
@@ -915,7 +923,7 @@ if __name__ == "__main__":
     results = parser.parse_args()
 
     launch_service()
-    print(results)
+    # print(results)
     # get_level_1_quotes_and_trades(ticker="AMD", seconds=1)
     # get_tickdata(ticker="AMD", max_ticks=10000, num_days=4)
     # get_historical_bar_data(ticker="AMD",

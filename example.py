@@ -124,6 +124,7 @@ if __name__ == "__main__":
 
 
         launch_futures('bar:TOPS')  # KEEP A RUNNING CONNECTION
+        launch_futures('bar:TOPS')  # KEEP A RUNNING CONNECTION
 
         while 1:
             # launch_service()
