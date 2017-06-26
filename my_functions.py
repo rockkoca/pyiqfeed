@@ -496,19 +496,13 @@ history_cache = {}
 
 
 # noinspection PyMethodMayBeStatic,PyMissingOrEmptyDocstring
-class MyBarListener(VerboseIQFeedListener):
+class MyBarListener(VerboseBarListener):
     """
     Verbose version of SilentBarListener.
 
     See documentation for SilentBarListener member functions.
 
     """
-
-    def process_current_login(self, _id):
-        print(_id)
-
-    def process_current_password(self, _pass):
-        print(_pass)
 
     def feed_is_stale(self) -> None:
         super().feed_is_stale()
@@ -669,7 +663,7 @@ def get_administrative_messages(seconds: int):
     """Run and AdminConn and print connection stats to screen."""
 
     admin_conn = iq.AdminConn(name="pyiqfeed-Example-admin-messages")
-    admin_listener = MyBarListener("Admin Listener")
+    admin_listener = iq.SilentAdminListener("Admin Listener")
     admin_conn.add_listener(admin_listener)
 
     with iq.ConnConnector([admin_conn]) as connector:
