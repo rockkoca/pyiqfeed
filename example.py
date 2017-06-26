@@ -141,7 +141,7 @@ if __name__ == "__main__":
                 launch_futures(lv1, stocks[stock]['auto'].get('chart', 0))
             time_cost = 0
             counter = 0
-            limit = 2000
+            limit = 20
             while 1:
                 start = time.time()
                 stocks = update_mongo.get_symbols()
