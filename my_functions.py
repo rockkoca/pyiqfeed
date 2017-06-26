@@ -504,6 +504,9 @@ class MyBarListener(VerboseIQFeedListener):
 
     """
 
+    def process_current_login(self, _id):
+        print(_id)
+
     def feed_is_stale(self) -> None:
         super().feed_is_stale()
         relaunch_service()
