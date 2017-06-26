@@ -51,9 +51,8 @@ def check_connection():
         # print('connection is healthy')
     except Exception as e:
         time.sleep(2)
-        if str(e).startswith('[Errno'):
-            subprocess.call('killall iqconnect.exe', shell=True)
-            launch_service()
+        # if str(e).startswith('[Errno'):
+        subprocess.call('wineserver -k9', shell=True)
         launch_service()
 
 
