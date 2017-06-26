@@ -505,7 +505,7 @@ class MyBarListener(VerboseIQFeedListener):
 
     def feed_is_stale(self) -> None:
         super().feed_is_stale()
-        relaunch_service()
+        # relaunch_service()
 
     def __init__(self, name: str):
         super().__init__(name)
