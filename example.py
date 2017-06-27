@@ -43,7 +43,7 @@ if __name__ == "__main__":
 
     # We can use a with statement to ensure threads are cleaned up promptly
     # TODO Fix MongoClient opened before fork. Create MongoClient
-    set_interval(check_connection, 3)
+    set_interval(check_connection, 5)
     pool = {}
     #
     bars = threading.Timer(1, get_live_multi_interval_bars, [{}, 30, 1, True])
