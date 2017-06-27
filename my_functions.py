@@ -283,6 +283,7 @@ class UpdateMongo(object):
                            float(fields[6]),  # close
                            int(fields[8]),  # volume
                        ]
+                       , dtype='f8'
                    )
 
     def update_bars(self, data: np.array, name: str, history=False) -> None:
