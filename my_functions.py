@@ -405,9 +405,9 @@ class UpdateMongo(object):
             sar = SAR(sample)
 
         with concurrent.futures.ProcessPoolExecutor() as executor:
-            ex = executor.submit(calculator, inputs)
-            for future in concurrent.futures.as_completed(ex):
-                print(str(future.result())[:20])
+            future = executor.submit(calculator, inputs)
+            # for future in concurrent.futures.as_completed(ex):
+            print(str(future.result())[:20])
 
 
 def launch_service():
