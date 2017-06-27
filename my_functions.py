@@ -71,7 +71,7 @@ def check_connection():
 
 
 def is_server() -> bool:
-    return sys.platform != 'darwin'
+    return sys.platform == 'darwin'
 
 
 if sys.platform == 'darwin':
@@ -671,6 +671,7 @@ def get_live_multi_interval_bars(tickers: [str], bar_len: int, seconds: int, aut
         for ticker in tickers:
             bar_conn.watch(symbol=ticker, interval_len=bar_len,
                            interval_type='s', update=1, lookback_bars=look_back_bars)
+            print('watching {}'.format(ticker))
             if i % 5 == 0:
                 time.sleep(3)
         while 1:
