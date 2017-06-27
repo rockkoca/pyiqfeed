@@ -3135,8 +3135,6 @@ class BarConn(FeedConn):
 
     def _process_watch(self, fields: Sequence[str]) -> None:
         """Process a watches message."""
-        print(fields)
-
         assert len(fields) > 1
         assert fields[0] == 'S'
         assert fields[1] == 'WATCHES'
@@ -3245,7 +3243,6 @@ class BarConn(FeedConn):
         cmd = "BR,%s" % symbol
         if request_id:
             cmd += ',{}'.format(request_id)
-        print(cmd)
         self._send_cmd(cmd + '\r\n')
 
     def unwatch_all(self) -> None:
