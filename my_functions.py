@@ -281,7 +281,7 @@ class UpdateMongo(object):
                            float(fields[4]),  # high
                            float(fields[5]),  # low
                            float(fields[6]),  # close
-                           str(fields[8]),  # volume
+                           int(fields[8]),  # volume
                        ]
                    )
 
