@@ -122,13 +122,17 @@ if __name__ == "__main__":
             # launch_service()
             # print(results)
             # pre fix is always 3 characters
+            i = 0
 
             for stock in stocks.keys():
-                bar = combine_name('bar', stock)
-                launch_futures(bar, True, bar_len=60)
 
-                # lv1 = combine_name('lv1', stock)
-                # launch_futures(lv1, True)
+                bar = combine_name('bar', stock)
+                launch_futures(bar, True, bar_len=30)
+                lv1 = combine_name('lv1', stock)
+                launch_futures(lv1, True)
+                if i % 10 == 0:
+                    time.sleep(5)
+
             time_cost = 0
             counter = 0
             limit = 50
@@ -145,8 +149,7 @@ if __name__ == "__main__":
 
                     except Exception as e:
                         print('{} crashed and restarted'.format(key), e)
-                    if counter == 0:
-                        time.sleep(1)
+
 
                 counter += 1
                 if counter == limit:
