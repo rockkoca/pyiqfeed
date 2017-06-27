@@ -145,6 +145,8 @@ if __name__ == "__main__":
 
                     except Exception as e:
                         print('{} crashed and restarted'.format(key), e)
+                    if counter == 0:
+                        time.sleep(1)
 
                 counter += 1
                 if counter == limit:
