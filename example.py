@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
     pool = {}
     #
-    bars = threading.Timer(1, get_live_multi_interval_bars, [{}, 30, 1, True])
+    bars = threading.Timer(5, get_live_multi_interval_bars, [{}, 30, 1, True])
     bars.start()
 
     lv1 = threading.Timer(5, get_level_1_multi_quotes_and_trades, [{}, 1, True])
