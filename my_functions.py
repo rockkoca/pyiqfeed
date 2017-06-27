@@ -336,6 +336,10 @@ class UpdateMongo(object):
         # print(old['bars'])
         self.cache['bars'][symbol] = old
 
+        # if not auto watch, calculate the indicators
+        if not update_meteor:
+            threading.Timer(.001, self.calculate_trend, [symbol]).start()
+
         if not history and update_meteor:
             # old['bars'] = old['bars'].tolist()
             self.update_history_bars_after_done(symbol, name)
@@ -391,10 +395,11 @@ class UpdateMongo(object):
             'close': data[4],
             'volume': data[5]
         }
-        print(inputs)
-
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            pass
+        # print(inputs)
+        bb = BBANDS(inputs, matype=MA_Type.T3)
+        sar = SAR(inputs)
+        # with concurrent.futures.ProcessPoolExecutor() as executor:
+        #     pass
 
 
 def launch_service():

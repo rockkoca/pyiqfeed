@@ -53,10 +53,10 @@ if __name__ == "__main__":
     trader = RB.Robinhood()
     trader.login(username=Credential.get_username(), password=Credential.get_password())
 
-    bars = threading.Timer(1, get_live_multi_interval_bars, [stocks, 30, 1, False])
+    bars = threading.Timer(5, get_live_multi_interval_bars, [stocks, 30, 1, False])
     bars.start()
 
-    lv1 = threading.Timer(1, get_level_1_multi_quotes_and_trades, [stocks, 1, False])
+    lv1 = threading.Timer(5, get_level_1_multi_quotes_and_trades, [stocks, 1, False])
     lv1.start()
 
     while 1:
