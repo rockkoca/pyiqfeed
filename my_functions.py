@@ -397,17 +397,17 @@ class UpdateMongo(object):
             'volume': data[5]
         }
         # print(inputs)
-        bb = BBANDS(inputs, matype=MA_Type.T3)
-        sar = SAR(inputs)
+        # bb = BBANDS(inputs, matype=MA_Type.T3)
+        # sar = SAR(inputs)
 
-        def calculator(inptus):
-            bb = BBANDS(inputs, matype=MA_Type.T3)
-            sar = SAR(inputs)
+        def calculator(sample):
+            bb = BBANDS(sample, matype=MA_Type.T3)
+            sar = SAR(sample)
 
         with concurrent.futures.ProcessPoolExecutor() as executor:
             ex = executor.submit(calculator, inputs)
             for future in concurrent.futures.as_completed(ex):
-                print(str(ex[:20]))
+                print(str(future.result())[:20])
 
 
 def launch_service():
