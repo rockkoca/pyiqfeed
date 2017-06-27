@@ -400,14 +400,23 @@ class UpdateMongo(object):
         # bb = BBANDS(inputs, matype=MA_Type.T3)
         # sar = SAR(inputs)
 
-        def calculator(sample):
-            bb = BBANDS(sample, matype=MA_Type.T3)
-            sar = SAR(sample)
-
         with concurrent.futures.ProcessPoolExecutor() as executor:
-            future = executor.submit(calculator, inputs)
-            # for future in concurrent.futures.as_completed(ex):
-            print(str(future.result())[:20])
+            futures = {
+                'bb': executor.submit(self.bb_calculator, inputs),
+                'sar': executor.submit(self.sar_calculator, inputs)
+            }
+            for name in concurrent.futures.as_completed(futures):
+                print(str(futures[name].result())[:20])
+
+    @staticmethod
+    def bb_calculator(sample):
+        bb = BBANDS(sample, matype=MA_Type.T3)
+        return bb
+
+    @staticmethod
+    def sar_calculator(sample):
+        sar = SAR(sample)
+        return sar
 
 
 def launch_service():
