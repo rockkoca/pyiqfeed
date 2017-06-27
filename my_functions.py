@@ -404,7 +404,7 @@ def launch_service():
                          version="5.2.6.0",
                          login=dtn_login,
                          password=dtn_password)
-    svc.launch()
+    svc.launch(30)
 
     # If you are running headless comment out the line above and uncomment
     # the line below instead. This runs IQFeed.exe using the xvfb X Framebuffer
