@@ -637,8 +637,12 @@ def get_level_1_multi_quotes_and_trades(tickers: dict, seconds: int, auto_unwatc
     with iq.ConnConnector([quote_conn]) as connector:
         all_fields = sorted(list(iq.QuoteConn.quote_msg_map.keys()))
         quote_conn.select_update_fieldnames(all_fields)
+        i = 0
         for ticker in tickers.keys():
             quote_conn.watch(ticker)
+            if i % 20 == 0:
+                time.sleep(3)
+            i += 1
         quote_conn.request_watches()
         # quote_conn.watch('NVDA')
         # quote_conn.regional_watch(ticker)
@@ -744,6 +748,7 @@ def get_live_multi_interval_bars(tickers: dict, bar_len: int, seconds: int, auto
         tickers = mongo_conn.get_symbols()
 
     with iq.ConnConnector([bar_conn]) as connector:
+        i = 0
         for ticker in tickers.keys():
             if tickers[ticker]['auto'].get('chart', 0):
                 inv = tickers[ticker]['auto'].get('chart_inv', 30)
@@ -752,6 +757,9 @@ def get_live_multi_interval_bars(tickers: dict, bar_len: int, seconds: int, auto
                                interval_type='s', update=1, lookback_bars=look_back_bars)
                 watching[ticker] = inv
                 print('watching {}@{}'.format(ticker, inv))
+            if i % 20 == 0:
+                time.sleep(3)
+            i += 1
         bar_conn.request_watches()
         while 1:
             if auto_unwatch:
