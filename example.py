@@ -46,7 +46,7 @@ if __name__ == "__main__":
     # set_interval(check_connection, 5)
 
     # wait 10 till the service is started
-    threading.Timer(10, check_connection, [3]).start()
+    threading.Timer(10, check_connection).start()
 
     pool = {}
     #
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     bars.start()
 
     lv1 = threading.Timer(1, get_level_1_multi_quotes_and_trades, [{}, 1, True])
-    # lv1.start()
+    lv1.start()
 
     while 1:
         time.sleep(1)
