@@ -277,7 +277,7 @@ class UpdateMongo(object):
         symbol, ndarray = self._process_bars(data)
         # symbol = dic['symbol']
         info = name.split('-')
-        assert symbol == info[0]
+        # assert symbol == info[0]
 
         instrument = col_ins.find_one({'symbol': symbol})
 
@@ -672,8 +672,8 @@ def get_live_multi_interval_bars(tickers: [str], bar_len: int, seconds: int, aut
             bar_conn.watch(symbol=ticker, interval_len=bar_len,
                            interval_type='s', update=1, lookback_bars=look_back_bars)
             print('watching {}'.format(ticker))
-            if i % 5 == 0:
-                time.sleep(3)
+            if i % 20 == 0:
+                time.sleep(1)
         while 1:
             for ticker in tickers:
                 pass
