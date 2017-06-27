@@ -22,7 +22,7 @@ import datetime as dt
 import subprocess
 
 verbose = 1
-look_back_bars = 480
+look_back_bars = 720
 
 
 def set_timeout(sec: float, func: object, *args, **kwargs) -> threading.Timer:
@@ -71,7 +71,7 @@ def check_connection():
 
 
 def is_server() -> bool:
-    return sys.platform == 'darwin'
+    return sys.platform != 'darwin'
 
 
 if sys.platform == 'darwin':
@@ -396,6 +396,7 @@ class MyQuoteListener(iq.SilentQuoteListener):
         super().__init__(name)
         self.update_mongo = UpdateMongo()
         self.summary_tick_id = {}
+        self.watches = {}
 
     def process_invalid_symbol(self, bad_symbol: str) -> None:
         if not is_server() and verbose:
@@ -474,6 +475,8 @@ class MyQuoteListener(iq.SilentQuoteListener):
             print(cust_info)
 
     def process_watched_symbols(self, symbols: Sequence[str]):
+        self.watches.clear()
+        self.watches = set(symbols)
         if not is_server() and verbose:
             print("%s: List of subscribed symbols:" % self._name)
             print(symbols)
@@ -511,6 +514,7 @@ class MyBarListener(VerboseBarListener):
 
     def __init__(self, name: str):
         super().__init__(name)
+        self.watchers = {}
         self.update_mongo = UpdateMongo()
 
     def process_latest_bar_update(self, bar_data: np.array) -> None:
@@ -558,9 +562,13 @@ class MyBarListener(VerboseBarListener):
             print("%s: Replaced previous watch: %s" % (self._name, symbol))
 
     def process_watch(self, symbol: str, interval: int, request_id: str):
+        self.watchers['{}:{}'.format(symbol, interval)] = request_id
         if not is_server() and verbose:
-            print("%s: Process watch: %s, %d, %s" %
+            print("%s: Process watch: %s, %s, %s" %
                   (self._name, symbol, interval, request_id))
+
+    def get_request_id_sec(self, symbol: str, interval: int):
+        return self.watchers.get('{}:{}sec'.format(symbol, interval), None)
 
 
 def get_level_1_quotes_and_trades(ticker: str, seconds: int, auto_unwatch=True):
@@ -585,11 +593,16 @@ def get_level_1_quotes_and_trades(ticker: str, seconds: int, auto_unwatch=True):
         #     # quote_conn.regional_watch(symbol)
 
         quote_conn.news_on()
+        time.sleep(5)
+        quote_conn.request_watches()
+        quote_conn.unwatch(ticker)
+        time.sleep(5)
+        quote_conn.request_watches()
 
         while quote_conn.reader_running():
             # quote_conn.request_stats()
             # try:
-            quote_conn.refresh(ticker)
+            # quote_conn.refresh(ticker)
             # for symbol in update_mongo.get_symbols():
             #     # print(symbol)
             #     quote_conn.refresh(symbol)
@@ -604,6 +617,65 @@ def get_level_1_quotes_and_trades(ticker: str, seconds: int, auto_unwatch=True):
             if auto_unwatch and ticker in stocks and not stocks[ticker]['auto'].get('lv1', 0):
                 print('unwatch lv1', ticker)
                 break
+
+        quote_conn.unwatch(ticker)
+        quote_conn.remove_listener(quote_listener)
+
+
+def get_level_1_multi_quotes_and_trades(tickers: dict, seconds: int, auto_unwatch=True):
+    """Get level 1 quotes and trades for ticker for seconds seconds."""
+
+    quote_conn = MyQuote(name="{} pyiqfeed-lvl1".format('auto_unwatch' if auto_unwatch else 'auto'))
+    quote_listener = MyQuoteListener("{} Level 1 Listener".format('auto_unwatch' if auto_unwatch else 'auto'))
+    quote_conn.add_listener(quote_listener)
+    print('get_level_1_quotes_and_trades ' + 'auto_unwatch' if auto_unwatch else 'auto')
+
+    mongo_conn = UpdateMongo()
+    if auto_unwatch:
+        tickers = mongo_conn.get_symbols()
+
+    with iq.ConnConnector([quote_conn]) as connector:
+        all_fields = sorted(list(iq.QuoteConn.quote_msg_map.keys()))
+        quote_conn.select_update_fieldnames(all_fields)
+        for ticker in tickers.keys():
+            quote_conn.watch(ticker)
+        quote_conn.request_watches()
+        # quote_conn.watch('NVDA')
+        # quote_conn.regional_watch(ticker)
+        # quote_conn.regional_watch('NVDA')
+        # print(update_mongo.get_symbols())
+        # for symbol in update_mongo.get_symbols():
+        #     print(symbol, end=', ')
+        #     quote_conn.watch(symbol)
+        #     # quote_conn.regional_watch(symbol)
+
+        quote_conn.news_on()
+
+        while quote_conn.reader_running():
+            # quote_conn.request_stats()
+            # try:
+            # quote_conn.refresh(ticker)
+            # for symbol in update_mongo.get_symbols():
+            #     # print(symbol)
+            #     quote_conn.refresh(symbol)
+
+            # except Exception as e:
+            #     print(e)
+            # quote_conn.
+            # quote_conn.read_message()
+
+            stocks = mongo_conn.get_symbols()
+            for stock in stocks.keys():
+                if auto_unwatch:
+                    if not stocks[stock]['auto'].get('lv1', 0) and stock in quote_listener.watches:
+                        quote_conn.unwatch(stock)
+                        print('unwatch lv1 ', stock)
+                    elif stocks[stock]['auto'].get('lv1', 0):
+                        quote_conn.watch(stock)
+                        print('watch lv1 ', stock)
+
+            quote_conn.request_watches()
+            time.sleep(seconds)
 
         quote_conn.unwatch(ticker)
         quote_conn.remove_listener(quote_listener)
@@ -658,26 +730,61 @@ def get_live_interval_bars(ticker: str, bar_len: int, seconds: int, auto_unwatch
             time.sleep(seconds)
 
 
-def get_live_multi_interval_bars(tickers: [str], bar_len: int, seconds: int, auto_unwatch=True):
+def get_live_multi_interval_bars(tickers: dict, bar_len: int, seconds: int, auto_unwatch=True):
     """Get real-time interval bars"""
     bar_conn = iq.BarConn(name='{} pyiqfeed-Example-interval-bars'.format(str(tickers)))
     bar_listener = MyBarListener("{}-{}-bar-listener".format(str(tickers), bar_len))
     bar_conn.add_listener(bar_listener)
-    print('get_live_interval_bars {}@{}'.format(str(tickers), bar_len))
-    # mongo_conn = UpdateMongo()
+    # print('get_live_interval_bars {}@{}'.format(str(tickers), bar_len))
+    watching = {
+
+    }
+    mongo_conn = UpdateMongo()
+    if auto_unwatch:
+        tickers = mongo_conn.get_symbols()
 
     with iq.ConnConnector([bar_conn]) as connector:
-        i = 0
-        for ticker in tickers:
-            bar_conn.watch(symbol=ticker, interval_len=bar_len,
-                           interval_type='s', update=1, lookback_bars=look_back_bars)
-            print('watching {}'.format(ticker))
-            if i % 20 == 0:
-                time.sleep(1)
-            i += 1
+        for ticker in tickers.keys():
+            if tickers[ticker]['auto'].get('chart', 0):
+                inv = tickers[ticker]['auto'].get('chart_inv', 30)
+                bar_conn.watch(symbol=ticker,
+                               interval_len=inv,
+                               interval_type='s', update=1, lookback_bars=look_back_bars)
+                watching[ticker] = inv
+                print('watching {}@{}'.format(ticker, inv))
+        bar_conn.request_watches()
         while 1:
-            for ticker in tickers:
-                pass
+            if auto_unwatch:
+                new_tickers = mongo_conn.get_symbols()
+
+                for ticker in new_tickers.keys():
+                    new_inv = new_tickers[ticker]['auto'].get('chart_inv', 0)
+                    old_inv = watching.get(ticker, 0)
+                    watch = new_tickers[ticker]['auto'].get('chart', 0)
+                    request_id = bar_listener.get_request_id_sec(ticker, old_inv)
+                    if request_id:
+                        print(request_id)
+                    if not watch and ticker in watching:
+                        print('unwatch {}@{}'.format(ticker, old_inv))
+
+                        bar_conn.unwatch(ticker, request_id)
+                        # bar_conn.unwatch_all()
+                        del watching[ticker]
+                        continue
+
+                    if not new_inv or new_inv != old_inv:
+                        if ticker in watching:
+                            print('unwatch {}@{}'.format(ticker, old_inv))
+                            bar_conn.unwatch(ticker, request_id)
+                            del watching[ticker]
+                        if watch and new_inv != 0:
+                            time.sleep(.5)
+                            bar_conn.watch(symbol=ticker,
+                                           interval_len=new_inv,
+                                           interval_type='s', update=1, lookback_bars=look_back_bars)
+                            print('watching {}@{}'.format(ticker, new_inv))
+                            watching[ticker] = new_inv
+            bar_conn.request_watches()
             time.sleep(seconds)
 
 

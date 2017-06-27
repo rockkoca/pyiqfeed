@@ -63,6 +63,7 @@ from .exceptions import UnexpectedProtocol, UnauthorizedError
 from . import field_readers as fr
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -186,6 +187,8 @@ class FeedConn:
     def _send_cmd(self, cmd: str) -> None:
         with self._send_lock:
             # noinspection PyArgumentEqualDefault
+            if not cmd.endswith('\r\n'):
+                cmd += '\r\n'
             self._sock.sendall(cmd.encode(encoding='latin-1', errors='strict'))
 
     def reconnect_failed(self) -> bool:
@@ -211,8 +214,8 @@ class FeedConn:
         ready_list = select.select([self._sock], [], [self._sock], 5)
         if ready_list[2]:
             raise RuntimeError(
-                    "Error condition on socket connection to IQFeed: %s,"
-                    "" % self.name())
+                "Error condition on socket connection to IQFeed: %s,"
+                "" % self.name())
         if ready_list[0]:
             data_recvd = self._sock.recv(1024).decode('latin-1')
             with self._buf_lock:
@@ -615,7 +618,7 @@ class QuoteConn(FeedConn):
                      'Bid Time': ('Bid Time', 'u8', fr.read_hhmmssus),
                      'Change': ('Change', 'f8', fr.read_float64),
                      'Change From Open': (
-                     'Change From Open', 'f8', fr.read_float64),
+                         'Change From Open', 'f8', fr.read_float64),
                      'Close': ('Close', 'f8', fr.read_float64),
                      'Close Range 1': ('Close Range 1', 'f8', fr.read_float64),
                      'Close Range 2': ('Close Range 2', 'f8', fr.read_float64),
@@ -731,7 +734,7 @@ class QuoteConn(FeedConn):
         self._set_current_update_structs(self._current_update_fields)
 
         self._empty_fundamental_msg = np.zeros(
-                1, dtype=QuoteConn.fundamental_type)
+            1, dtype=QuoteConn.fundamental_type)
         self._empty_regional_msg = np.zeros(1, dtype=QuoteConn.regional_type)
 
     def connect(self) -> None:
@@ -787,12 +790,12 @@ class QuoteConn(FeedConn):
         story_date, story_time = fr.read_live_news_timestamp(fields[4])
         headline = fields[5]
         news = QuoteConn.NewsMsg(
-                story_id=story_id,
-                distributor=distributor,
-                symbol_list=symbol_list,
-                story_date=story_date,
-                story_time=story_time,
-                headline=headline)
+            story_id=story_id,
+            distributor=distributor,
+            symbol_list=symbol_list,
+            story_date=story_date,
+            story_time=story_time,
+            headline=headline)
         for listener in self._listeners:
             listener.process_news(news)
 
@@ -924,10 +927,10 @@ class QuoteConn(FeedConn):
         assert fields[0] == 'S'
         assert fields[1] == "CUST"
         cust_info = QuoteConn.CustomerInfoMsg(
-                svc_type=(fields[2] == "real_time"), ip_address=fields[3],
-                port=int(fields[4]), token=fields[5], version=fields[6],
-                rt_exchanges=fields[8].split(" "), max_symbols=int(fields[10]),
-                flags=fields[11])
+            svc_type=(fields[2] == "real_time"), ip_address=fields[3],
+            port=int(fields[4]), token=fields[5], version=fields[6],
+            rt_exchanges=fields[8].split(" "), max_symbols=int(fields[10]),
+            flags=fields[11])
         for listener in self._listeners:
             listener.process_customer_info(cust_info)
 
@@ -1058,7 +1061,7 @@ class QuoteConn(FeedConn):
         new_update_dtypes = list(
             itertools.repeat(("no_name", 'i8'), num_update_fields))
         new_update_reader = list(
-                itertools.repeat(lambda x: x, num_update_fields))
+            itertools.repeat(lambda x: x, num_update_fields))
         for field_num, field in enumerate(fields):
             if field not in QuoteConn.quote_msg_map:
                 raise RuntimeError("%s not in QuoteConn.dtn_update_map" %
@@ -1280,7 +1283,7 @@ class QuoteConn(FeedConn):
 
     def unwatch_all(self) -> None:
         """Unwatch all symbols."""
-        self._send_cmd("S,UNWATCH ALL")
+        self._send_cmd("S,UNWATCH ALL\r\n")
 
     def news_on(self) -> None:
         """
@@ -1666,13 +1669,13 @@ class HistoryConn(FeedConn):
     # Daily data is returned as a numpy array of this type.
     # Daily data means daily, weekly, monthly and annual data.
     daily_type = np.dtype(
-            [('date', 'M8[D]'), ('open_p', 'f8'), ('high_p', 'f8'),
-             ('low_p', 'f8'), ('close_p', 'f8'), ('prd_vlm', 'u8'),
-             ('open_int', 'u8')])
+        [('date', 'M8[D]'), ('open_p', 'f8'), ('high_p', 'f8'),
+         ('low_p', 'f8'), ('close_p', 'f8'), ('prd_vlm', 'u8'),
+         ('open_int', 'u8')])
     daily_h5_type = np.dtype(
-            [('date', 'i8'), ('open_p', 'f8'), ('high_p', 'f8'),
-             ('low_p', 'f8'), ('close_p', 'f8'), ('prd_vlm', 'u8'),
-             ('open_int', 'u8')])
+        [('date', 'i8'), ('open_p', 'f8'), ('high_p', 'f8'),
+         ('low_p', 'f8'), ('close_p', 'f8'), ('prd_vlm', 'u8'),
+         ('open_int', 'u8')])
 
     # Private data structure
     _databuf = namedtuple("_databuf",
@@ -2337,14 +2340,14 @@ class TableConn(FeedConn):
     port = FeedConn.lookup_port
 
     mkt_type = np.dtype(
-            [('mkt_id', 'u8'), ('short_name', 'S16'), ('name', 'S128'),
-             ('group_id', 'u8'), ('group', 'S128')])
+        [('mkt_id', 'u8'), ('short_name', 'S16'), ('name', 'S128'),
+         ('group_id', 'u8'), ('group', 'S128')])
 
     security_type = np.dtype(
-            [('sec_type', 'u8'), ('short_name', 'S16'), ('name', 'S128')])
+        [('sec_type', 'u8'), ('short_name', 'S16'), ('name', 'S128')])
 
     tcond_type = np.dtype(
-            [('tcond_id', 'u8'), ('short_name', 'S16'), ('name', 'S128')])
+        [('tcond_id', 'u8'), ('short_name', 'S16'), ('name', 'S128')])
 
     sic_type = np.dtype([('sic', 'u8'), ('name', 'S128')])
 
@@ -2442,11 +2445,11 @@ class TableConn(FeedConn):
                 while self._current_deque and (line_num < num_pts):
                     data_list = self._current_deque.popleft()
                     self.markets[line_num]['mkt_id'] = fr.read_uint64(
-                            data_list[0])
+                        data_list[0])
                     self.markets[line_num]['short_name'] = data_list[1]
                     self.markets[line_num]['name'] = data_list[2]
                     self.markets[line_num]['group_id'] = fr.read_uint64(
-                            data_list[3])
+                        data_list[3])
                     self.markets[line_num]['group'] = data_list[4]
                     line_num += 1
                     if line_num >= num_pts:
@@ -2469,7 +2472,7 @@ class TableConn(FeedConn):
                 while self._current_deque and (line_num < num_pts):
                     data_list = self._current_deque.popleft()
                     self.security_types[line_num]['sec_type'] = fr.read_uint64(
-                            data_list[0])
+                        data_list[0])
                     self.security_types[line_num]['short_name'] = data_list[1]
                     self.security_types[line_num]['name'] = data_list[2]
                     line_num += 1
@@ -2493,7 +2496,7 @@ class TableConn(FeedConn):
                 while self._current_deque and (line_num < num_pts):
                     data_list = self._current_deque.popleft()
                     self.trade_conds[line_num]['tcond_id'] = fr.read_uint64(
-                            data_list[0])
+                        data_list[0])
                     self.trade_conds[line_num]['short_name'] = data_list[1]
                     self.trade_conds[line_num]['name'] = data_list[2]
                     line_num += 1
@@ -2572,23 +2575,23 @@ class LookupConn(FeedConn):
                                 6: 'M', 7: 'N', 8: 'Q', 9: 'U', 10: 'V',
                                 11: 'X', 12: 'Z'}
     futures_month_letters = (
-            'F', 'G', 'H', 'J', 'K', 'M', 'N', 'Q', 'U', 'V', 'X', 'Z')
+        'F', 'G', 'H', 'J', 'K', 'M', 'N', 'Q', 'U', 'V', 'X', 'Z')
 
     call_month_letters = (
-            'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L')
+        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L')
     call_month_letter_map = {1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'E',
                              6: 'F', 7: 'G', 8: 'H', 9: 'I', 10: 'J',
                              11: 'K', 12: 'L'}
 
     put_month_letters = (
-            'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X')
+        'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X')
     put_month_letter_map = {1: 'M', 2: 'N', 3: 'O', 4: 'P', 5: 'Q',
                             6: 'R', 7: 'S', 8: 'T', 9: 'U', 10: 'V',
                             11: 'W', 12: 'X'}
 
     asset_type = np.dtype(
-            [('symbol', 'S128'), ('market', 'u1'), ('security_type', 'u1'),
-             ('name', 'S128'), ('sector', 'u8')])
+        [('symbol', 'S128'), ('market', 'u1'), ('security_type', 'u1'),
+         ('name', 'S128'), ('sector', 'u8')])
 
     _databuf = namedtuple("_databuf",
                           ['failed', 'err_msg', 'num_pts', 'raw_data'])
@@ -2654,10 +2657,10 @@ class LookupConn(FeedConn):
         """Get the data buffer for a specific request."""
         with self._req_lock:
             buf = LookupConn._databuf(
-                    failed=self._req_failed[req_id],
-                    err_msg=self._req_err[req_id],
-                    num_pts=self._req_numlines[req_id],
-                    raw_data=self._req_buf[req_id])
+                failed=self._req_failed[req_id],
+                err_msg=self._req_err[req_id],
+                num_pts=self._req_numlines[req_id],
+                raw_data=self._req_buf[req_id])
         self._cleanup_request_data(req_id)
         return buf
 
@@ -3084,10 +3087,10 @@ class BarConn(FeedConn):
     port = FeedConn.deriv_port
 
     interval_data_type = np.dtype(
-            [('symbol', 'S64'), ('date', 'M8[D]'), ('time', 'u8'),
-             ('open_p', 'f8'), ('high_p', 'f8'), ('low_p', 'f8'),
-             ('close_p', 'f8'), ('tot_vlm', 'u8'), ('prd_vlm', 'u8'),
-             ('num_trds', 'u8')])
+        [('symbol', 'S64'), ('date', 'M8[D]'), ('time', 'u8'),
+         ('open_p', 'f8'), ('high_p', 'f8'), ('low_p', 'f8'),
+         ('close_p', 'f8'), ('tot_vlm', 'u8'), ('prd_vlm', 'u8'),
+         ('num_trds', 'u8')])
 
     def __init__(self, name: str = "BarConn", host: str = host,
                  port: int = port):
@@ -3132,16 +3135,24 @@ class BarConn(FeedConn):
 
     def _process_watch(self, fields: Sequence[str]) -> None:
         """Process a watches message."""
-        assert len(fields) > 3
+        print(fields)
+
+        assert len(fields) > 1
         assert fields[0] == 'S'
         assert fields[1] == 'WATCHES'
-        symbol = fields[2]
-        interval = fields[3]
-        request_id = ""
-        if len(fields) > 4:
-            request_id = fields[4]
-        for listener in self._listeners:
-            listener.process_watch(symbol, interval, request_id)
+        if len(fields) == 2:
+            return
+
+        fields = fields[2:]
+
+        for i in range(0, len(fields), 3):
+            info = fields[i:i+3]
+            symbol = info[0]
+            interval = info[1]
+            request_id = info[2]
+
+            for listener in self._listeners:
+                listener.process_watch(symbol, interval, request_id)
 
     def _process_bars(self, fields: Sequence[str]):
         """Parse bar data and call appropriate callback."""
@@ -3151,7 +3162,7 @@ class BarConn(FeedConn):
         interval_data = self._empty_interval_msg
         interval_data['symbol'] = fields[2]
         interval_data['date'], interval_data['time'] = fr.read_posix_ts(
-                fields[3])
+            fields[3])
         interval_data['open_p'] = np.float64(fields[4])
         interval_data['high_p'] = np.float64(fields[5])
         interval_data['low_p'] = np.float64(fields[6])
@@ -3229,13 +3240,17 @@ class BarConn(FeedConn):
             bf_str, ef_str, request_id, interval_type, update_str)
         self._send_cmd(bar_cmd)
 
-    def unwatch(self, symbol: str):
+    def unwatch(self, symbol: str, request_id=None):
         """Unwatch a specific symbol"""
-        self._send_cmd("BR,%s" % symbol)
+        cmd = "BR,%s" % symbol
+        if request_id:
+            cmd += ',{}'.format(request_id)
+        print(cmd)
+        self._send_cmd(cmd + '\r\n')
 
     def unwatch_all(self) -> None:
         """Unwatch all symbols."""
-        self._send_cmd("S,UNWATCH ALL")
+        self._send_cmd("S,UNWATCH ALL\r\n")
 
     def request_watches(self) -> None:
         """Request a list of all symbols we have subscribed."""
@@ -3334,10 +3349,10 @@ class NewsConn(FeedConn):
     def _get_data_buf(self, req_id: str) -> namedtuple:
         with self._req_lock:
             buf = NewsConn._databuf(
-                    failed=self._req_failed[req_id],
-                    err_msg=self._req_err[req_id],
-                    num_pts=self._req_numlines[req_id],
-                    raw_data=self._req_buf[req_id])
+                failed=self._req_failed[req_id],
+                err_msg=self._req_err[req_id],
+                num_pts=self._req_numlines[req_id],
+                raw_data=self._req_buf[req_id])
         self._cleanup_request_data(req_id)
         return buf
 
@@ -3409,17 +3424,17 @@ class NewsConn(FeedConn):
                         symbol_list = [sym for sym in symbol_list if sym != '']
                 elif "timestamp" == item.tag:
                     story_date, story_time = fr.read_hist_news_timestamp(
-                            item.text)
+                        item.text)
                 elif "text" == item.tag:
                     headline = item.text
 
             news_headlines.append(
-                    NewsConn.NewsMsg(story_id=story_id,
-                                     distributor=distributor,
-                                     symbol_list=symbol_list,
-                                     story_date=story_date,
-                                     story_time=story_time,
-                                     headline=headline))
+                NewsConn.NewsMsg(story_id=story_id,
+                                 distributor=distributor,
+                                 symbol_list=symbol_list,
+                                 story_date=story_date,
+                                 story_time=story_time,
+                                 headline=headline))
         return news_headlines
 
     def request_news_headlines(self, sources: List[str] = None,
@@ -3549,9 +3564,9 @@ class NewsConn(FeedConn):
         story_counts = []
         for count_data in xml_data:
             story_counts.append(
-                    NewsConn.NewsCountMsg(
-                            symbol=count_data.attrib['Name'],
-                            count=int(count_data.attrib['StoryCount'])))
+                NewsConn.NewsCountMsg(
+                    symbol=count_data.attrib['Name'],
+                    count=int(count_data.attrib['StoryCount'])))
         return story_counts
 
     def request_story_counts(self, symbols: List[str],
