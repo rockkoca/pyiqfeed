@@ -86,19 +86,19 @@ if __name__ == "__main__":
                 if stocks[name]['auto'].get('chart', 0):
                     update_inv = False
                     bar_len = stocks[name]['auto'].get('chart_inv', 30)
-                    # last_bar_len = chart_invs.get(future_name, 0)
-                    # if bar_len != chart_invs.get(future_name, 0):
-                    #     if chart_invs.get(future_name, 0):
-                    #         print("unwatch {} @ {}".format(name, chart_invs.get(future_name, bar_len)))
-                    #     update_inv = True
-                    #     chart_invs[future_name] = bar_len
+                    last_bar_len = chart_invs.get(future_name, 0)
+                    if bar_len != chart_invs.get(future_name, 0):
+                        if chart_invs.get(future_name, 0):
+                            print("unwatch {} @ {}".format(name, chart_invs.get(future_name, bar_len)))
+                        update_inv = True
+                        chart_invs[future_name] = bar_len
 
                     # print(stocks[name])
                     if update_inv or future_name not in pool or not pool[future_name].running():
                         print('watch bar ' + name + " : " + str(bar_len))
                         pool[future_name] = executor.submit(get_live_interval_bars, ticker=name,
                                                             bar_len=bar_len,
-                                                            seconds=1)
+                                                            seconds=1, auto_unwatch=False)
                 else:
                     stop()
 
@@ -107,7 +107,7 @@ if __name__ == "__main__":
                     if future_name not in pool or not pool[future_name].running():
                         print('watch lv1 ' + name)
                         pool[future_name] = executor.submit(get_level_1_quotes_and_trades, ticker=name,
-                                                            seconds=1)
+                                                            seconds=1, auto_unwatch=False)
                 else:
                     stop()
             elif pre == 'lv2':

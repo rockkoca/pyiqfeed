@@ -562,7 +562,7 @@ class MyBarListener(VerboseBarListener):
                   (self._name, symbol, interval, request_id))
 
 
-def get_level_1_quotes_and_trades(ticker: str, seconds: int):
+def get_level_1_quotes_and_trades(ticker: str, seconds: int, auto_unwatch=True):
     """Get level 1 quotes and trades for ticker for seconds seconds."""
 
     quote_conn = MyQuote(name="{} pyiqfeed-lvl1".format(ticker))
@@ -600,7 +600,7 @@ def get_level_1_quotes_and_trades(ticker: str, seconds: int):
 
             time.sleep(3)
             stocks = mongo_conn.get_symbols()
-            if ticker in stocks and not stocks[ticker]['auto'].get('lv1', 0):
+            if auto_unwatch and ticker in stocks and not stocks[ticker]['auto'].get('lv1', 0):
                 print('unwatch lv1', ticker)
                 break
 
@@ -634,7 +634,7 @@ def get_trades_only(ticker: str, seconds: int):
         quote_conn.unwatch(ticker)
 
 
-def get_live_interval_bars(ticker: str, bar_len: int, seconds: int):
+def get_live_interval_bars(ticker: str, bar_len: int, seconds: int, auto_unwatch=True):
     """Get real-time interval bars"""
     bar_conn = iq.BarConn(name='{} pyiqfeed-Example-interval-bars'.format(ticker))
     bar_listener = MyBarListener("{}-{}-bar-listener".format(ticker, bar_len))
@@ -647,7 +647,7 @@ def get_live_interval_bars(ticker: str, bar_len: int, seconds: int):
                        interval_type='s', update=1, lookback_bars=look_back_bars)
         while 1:
             stocks = mongo_conn.get_symbols()
-            if ticker in stocks and \
+            if auto_unwatch and ticker in stocks and \
                     (not stocks[ticker]['auto'].get('chart', 0)
                      or stocks[ticker]['auto'].get('chart_inv', 0) != bar_len):
                 bar_conn.unwatch(ticker)
@@ -679,7 +679,7 @@ def get_tickdata(ticker: str, max_ticks: int, num_days: int):
     """Show how to read tick-data"""
 
     hist_conn = iq.HistoryConn(name="pyiqfeed-Example-tickdata")
-    hist_listener = MyBarListener("History Tick Listener")
+    hist_listener = iq.VerboseIQFeedListener("History Tick Listener")
     hist_conn.add_listener(hist_listener)
 
     # Look at conn.py for request_ticks, request_ticks_for_days and
@@ -774,7 +774,7 @@ def get_historical_bar_data(ticker: str, bar_len: int, bar_unit: str,
 def get_daily_data(ticker: str, num_days: int):
     """Historical Daily Data"""
     hist_conn = iq.HistoryConn(name="pyiqfeed-Example-daily-data")
-    hist_listener = MyBarListener("History Bar Listener")
+    hist_listener = iq.VerboseBarListener("History Bar Listener")
     hist_conn.add_listener(hist_listener)
 
     with iq.ConnConnector([hist_conn]) as connector:
