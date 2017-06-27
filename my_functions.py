@@ -658,6 +658,27 @@ def get_live_interval_bars(ticker: str, bar_len: int, seconds: int, auto_unwatch
             time.sleep(seconds)
 
 
+def get_live_multi_interval_bars(tickers: [str], bar_len: int, seconds: int, auto_unwatch=True):
+    """Get real-time interval bars"""
+    bar_conn = iq.BarConn(name='{} pyiqfeed-Example-interval-bars'.format(str(tickers)))
+    bar_listener = MyBarListener("{}-{}-bar-listener".format(str(tickers), bar_len))
+    bar_conn.add_listener(bar_listener)
+    print('get_live_interval_bars {}@{}'.format(str(tickers), bar_len))
+    # mongo_conn = UpdateMongo()
+
+    with iq.ConnConnector([bar_conn]) as connector:
+        i = 0
+        for ticker in tickers:
+            bar_conn.watch(symbol=ticker, interval_len=bar_len,
+                           interval_type='s', update=1, lookback_bars=look_back_bars)
+            if i % 5 == 0:
+                time.sleep(3)
+        while 1:
+            for ticker in tickers:
+                pass
+            time.sleep(seconds)
+
+
 # def unwatch_live_interval_bar
 
 def get_administrative_messages(seconds: int):
