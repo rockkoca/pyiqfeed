@@ -674,6 +674,7 @@ def get_live_multi_interval_bars(tickers: [str], bar_len: int, seconds: int, aut
             print('watching {}'.format(ticker))
             if i % 20 == 0:
                 time.sleep(1)
+            i += 1
         while 1:
             for ticker in tickers:
                 pass
