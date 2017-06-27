@@ -53,6 +53,7 @@ def relaunch_service():
 
 
 def check_connection():
+    global launch_service_lock
     try:
         # if key == 'bar:TOPS' and future.running():
         #     print(key, future.running())
