@@ -286,7 +286,7 @@ class UpdateMongo(object):
                        , dtype='f8'
                    )
 
-    def update_bars(self, data: np.array, name: str, history=False) -> None:
+    def update_bars(self, data: np.array, name: str, history=False, live=False) -> None:
         col_ins = self.db.instruments
         col = self.db.bars
         symbol, ndarray = self._process_bars(data)
@@ -338,7 +338,7 @@ class UpdateMongo(object):
         self.cache['bars'][symbol] = old
 
         # if not auto watch, calculate the indicators
-        if not update_meteor:
+        if not update_meteor and live:
             threading.Timer(.001, self.calculate_trend, [symbol]).start()
 
         if not history and update_meteor:
@@ -573,7 +573,7 @@ class MyBarListener(VerboseBarListener):
             print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
 
     def process_live_bar(self, bar_data: np.array) -> None:
-        self.update_mongo.update_bars(bar_data, name=self._name)
+        self.update_mongo.update_bars(bar_data, name=self._name, live=True)
         if verbose:
             print("%s: Process live bar:" % self._name)
             # print(bar_data)
