@@ -277,10 +277,10 @@ class UpdateMongo(object):
                    np.array(
                        [
                            str(int(self.tick_time(fields[1], fields[2]).timestamp())) + '000',
-                           fields[3],  # open
-                           fields[4],  # high
-                           fields[5],  # low
-                           fields[6],  # close
+                           float(fields[3]),  # open
+                           float(fields[4]),  # high
+                           float(fields[5]),  # low
+                           float(fields[6]),  # close
                            str(fields[8]),  # volume
                        ]
                    )
