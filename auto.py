@@ -123,7 +123,6 @@ if __name__ == "__main__":
             # print(results)
             # pre fix is always 3 characters
             i = 0
-
             for stock in stocks.keys():
 
                 bar = combine_name('bar', stock)
@@ -132,6 +131,7 @@ if __name__ == "__main__":
                 launch_futures(lv1, True)
                 if i % 10 == 0:
                     time.sleep(5)
+                i += 1
 
             time_cost = 0
             counter = 0
