@@ -434,7 +434,7 @@ class UpdateMongo(object):
         def log(info):
             logs.insert({
                 'type': 'log',
-                'info': info + " {}".format(time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime())),
+                'info': info + " {}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())),
                 'date': datetime.datetime.utcnow()
             })
 
