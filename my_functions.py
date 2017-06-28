@@ -469,7 +469,7 @@ class UpdateMongo(object):
 
     @staticmethod
     def bb_calculator(sample):
-        bb = BBANDS(sample, matype=MA_Type.T3)
+        bb = BBANDS(sample, timeperiod=20, matype=MA_Type.T3)
         return bb
 
     @staticmethod
