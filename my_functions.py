@@ -416,9 +416,9 @@ class UpdateMongo(object):
             for future in concurrent.futures.as_completed(futures):
                 # print(str(future.result())[:100])
                 indicators[futures[future]] = future.result()
-            rebound = self.rebound(indicators, inputs)
-            if rebound > 1.9:
-                self.insert_possible_rebound_stock(symbol, name, rebound)
+        rebound = self.rebound(indicators, inputs)
+        if rebound > 1.9:
+            self.insert_possible_rebound_stock(symbol, name, rebound)
 
     def insert_possible_rebound_stock(self, symbol: str, name: str, rebound: float):
         rank = 100000
@@ -493,7 +493,7 @@ class UpdateMongo(object):
             if bb[-1][i] > low[i]:
                 cross_bb_b = True
                 break
-
+        print("close_above:{} up_sar:{} cross_bb_b:{} down_sar:{}".format(close_above, up_sar, cross_bb_b, down_sar))
         # sar rebound + cross bb b then close above
         # this is the best
         if close_above and up_sar and cross_bb_b and down_sar:
