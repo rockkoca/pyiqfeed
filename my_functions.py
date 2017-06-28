@@ -447,7 +447,7 @@ class UpdateMongo(object):
             print('none tradable stock {}'.format(symbol))
             return
         elif ins.find({'symbol': symbol}):  # check if the stock already in the watching list
-            info = '{}, rebounding {}, already in watching list '.format(symbol, rebound)
+            info = '{}, rebounding {}, already watching '.format(symbol, rebound)
             print(info)
             log(info)
         else:
