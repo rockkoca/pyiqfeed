@@ -1,8 +1,7 @@
 #! /usr/bin/env python3
 # coding=utf-8
 from my_functions import *
-import robinhood.Robinhood as RB
-from robinhood.credentials import *
+
 import concurrent.futures
 import multiprocessing
 import ujson
@@ -50,8 +49,7 @@ if __name__ == "__main__":
     # get sp500 stocks
     stocks = get_sp500()
 
-    trader = RB.Robinhood()
-    trader.login(username=Credential.get_username(), password=Credential.get_password())
+
 
     bars = threading.Timer(5, get_live_multi_interval_bars, [stocks, 30, 1, False])
     bars.start()

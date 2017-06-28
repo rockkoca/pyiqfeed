@@ -11,7 +11,7 @@ print(ujson.dumps(trader.get_account()))
 amd = trader.instrument('S')
 print(amd)
 
-print(trader.sp500_up())
+# print(trader.sp500_up())
 # print(trader.limit_buy(instrument=amd, price='10.00', quantity=1))
 
 class TestRB(unittest.TestCase):

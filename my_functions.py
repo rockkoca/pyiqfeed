@@ -25,8 +25,14 @@ import numpy as np
 from talib.abstract import *
 from talib import MA_Type
 
+import robinhood.Robinhood as RB
+from robinhood.credentials import *
+
 verbose = 0
 look_back_bars = 720
+
+trader = RB.Robinhood()
+trader.login(username=Credential.get_username(), password=Credential.get_password())
 
 
 def set_timeout(sec: float, func: object, *args, **kwargs) -> threading.Timer:
@@ -91,7 +97,8 @@ class UpdateMongo(object):
     def __init__(self):
         self.cache = {
             'bars': {},
-            'update_mongo_time': {}
+            'update_mongo_time': {},
+            'trend': {}
         }
         if sys.platform == 'darwin':
             self.client = MongoClient("mongodb://localhost:3001")
@@ -339,7 +346,7 @@ class UpdateMongo(object):
 
         # if not auto watch, calculate the indicators
         if not update_meteor and live:
-            threading.Timer(.001, self.calculate_trend, [symbol]).start()
+            threading.Timer(.001, self.calculate_trend, [symbol, name]).start()
 
         if not history and update_meteor:
             # old['bars'] = old['bars'].tolist()
@@ -384,9 +391,9 @@ class UpdateMongo(object):
             )
             self.cache['update_mongo_time'][symbol] = current_data_time
             # self.cache['bars'][name] = default_old
-            # threading.Timer(.001, self.calculate_trend, [symbol]).start()
+            # threading.Timer(.001, self.calculate_trend, [symbol, name]).start()
 
-    def calculate_trend(self, symbol):
+    def calculate_trend(self, symbol, name):
 
         data = self.cache['bars'][symbol]['bars']
         inputs = {
@@ -405,8 +412,60 @@ class UpdateMongo(object):
                 executor.submit(self.bb_calculator, inputs): 'bb',
                 executor.submit(self.sar_calculator, inputs): 'sar'
             }
+            indicators = {}
             for future in concurrent.futures.as_completed(futures):
-                print(str(future.result())[:20])
+                # print(str(future.result())[:100])
+                indicators[futures[future]] = future.result()
+                rebound = self.rebound(indicators, inputs)
+                if rebound > 1.9:
+                    self.insert_possible_rebound_stock(symbol, name, rebound)
+
+    def insert_possible_rebound_stock(self, symbol: str, name: str, rebound: float):
+        rank = 100000
+        ins = self.db.instruments
+        logs = self.db.logs
+        auto = {
+            'stop_profit': 0.01,
+            'stop_lose': 0.01,
+            'sl': False,
+            'sp': False,
+            'size': 100,
+            'inc': '0.01',
+            'lock': {
+                'lp': False,
+                'buffer': '.02',
+                'high': None
+
+            }
+        }
+        stock = trader.instrument(symbol)
+
+        if rebound > 4.5:  # the best so far
+            rank = -100000
+        elif rebound > 3.5:
+            rank = -10000
+
+        if not stock or not stock['tradeable']:
+            print('none tradable stock {}'.format(symbol))
+            return
+        elif ins.find({'symbol': symbol}):  # check if the stock already in the watching list
+            info = '{}, rebounding {}, already in watching list '.format(symbol, rebound)
+            print(info)
+            logs.insert({
+                'type': 'log',
+                'info': info,
+            })
+        else:
+            info = '{}, rebounding {}'.format(symbol, rebound)
+            print(info)
+            logs.insert({
+                'type': 'log',
+                'info': info,
+            })
+            stock['auto'] = auto
+            stock['rank'] = rank
+            ins.insert(stock, True)
+        self.update_history_bars_after_done(symbol, name)
 
     @staticmethod
     def bb_calculator(sample):
@@ -417,6 +476,33 @@ class UpdateMongo(object):
     def sar_calculator(sample):
         sar = SAR(sample)
         return sar
+
+    @staticmethod
+    def rebound(indicators: dict, inputs: dict) -> float:
+        bb = indicators['bb']
+        sar = indicators['sar']
+        close = inputs['close']
+        low = inputs['low']
+        close_above = bb[-1][-1] < close[-1]
+        up_sar = sar[-1] > close[-1]
+        down_sar = sar[-2] > close[-2]
+        cross_bb_b = False
+
+        # check if cross bb b before last one
+        for i in range(-2, -6, -1):
+            if bb[-1][i] > low[i]:
+                cross_bb_b = True
+                break
+
+        # sar rebound + cross bb b then close above
+        # this is the best
+        if close_above and up_sar and cross_bb_b and down_sar:
+            return 5
+        elif close_above and up_sar and cross_bb_b:
+            return 4
+        elif close_above and cross_bb_b:
+            return 3
+        return -1
 
 
 def launch_service():
