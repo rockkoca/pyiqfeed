@@ -23,7 +23,7 @@ def get_sp500():
         stocks = {}
         for symbol in ['AMD', 'XIV', 'NVDA']:
             # print(symbol.attrs['value'])
-            stocks[symbol.attrs['value']] = {
+            stocks[symbol] = {
                 'auto': {
                     'chart': 1,
                     'chart_inv': 30,
