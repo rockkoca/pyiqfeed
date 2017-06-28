@@ -220,10 +220,11 @@ class UpdateMongo(object):
         dt = iq.field_readers.date_us_to_datetime(dt, int(us))
         return dt
 
-    def update_quote(self, data: np.array) -> None:
+    def update_quote(self, data: np.array, name: str) -> None:
         col = self.db.quotes
         dic = self._process_quote(data)
         symbol = dic['symbol']
+        update_meteor = name.startswith('auto_unwatch')
         if symbol == 'TOPS':
             return
         if dic:
@@ -246,7 +247,7 @@ class UpdateMongo(object):
 
             if new_dic['tick'] == old.get('tick', 0):
                 return
-
+            # if update_meteor
             result = col.update_one(
                 {'symbol': new_dic['symbol']},
                 {
@@ -407,8 +408,9 @@ class UpdateMongo(object):
             for future in concurrent.futures.as_completed(futures):
                 # print(str(future.result())[:100])
                 indicators[futures[future]] = future.result()
-        rebound = self.rebound(indicators, inputs, symbol)
+        rebound, result = self.rebound(indicators, inputs, symbol)
         if rebound > 1.9:
+            print(result)
             self.insert_possible_rebound_stock(symbol, name, rebound)
 
     def insert_possible_rebound_stock(self, symbol: str, name: str, rebound: float):
@@ -470,7 +472,7 @@ class UpdateMongo(object):
         return sar
 
     @staticmethod
-    def rebound(indicators: dict, inputs: dict, symbol: str) -> float:
+    def rebound(indicators: dict, inputs: dict, symbol: str) -> (float, dict):
         bb = indicators['bb']
         sar = indicators['sar']
         open = inputs['open']
@@ -487,22 +489,34 @@ class UpdateMongo(object):
             if bb[-1][i] > low[i]:
                 cross_bb_l = True
                 break
+        result = {
+            'symbol': symbol,
+            'open': open[-1],
+            'close': close[-1],
+            'bb_low': bb[-1][-5:],
+            'sar': sar[-5:],
+            "close_above_bb_l": close_above_bb_l,
+            "cross_bb_l": cross_bb_l,
+            "down_sar_pre": down_sar_pre,
+            "green_bar": green_bar,
 
+        }
         # sar rebound + cross bb b then close above
         # this is the best
         if green_bar:
-            print(symbol, end=": ")
-            print("close_above_bb_l:{} up_sar:{} cross_bb_l:{} down_sar_pre:{} green_bar:{} len_sar: {}"
-                  .format(close_above_bb_l, up_sar, cross_bb_l, down_sar_pre, green_bar, len(sar)))
-            print('\tclose: {}\n\topen:{}\n\tbb_low: {}\n\tsar: {}\n\tlen_data: {}'
-                  .format(close[-1], open[-1], bb[-1][-5:], sar[-5:], len(open)))
+            # print(symbol, end=": ")
+            # print("close_above_bb_l:{} up_sar:{} cross_bb_l:{} down_sar_pre:{} green_bar:{} len_sar: {}"
+            #       .format(close_above_bb_l, up_sar, cross_bb_l, down_sar_pre, green_bar, len(sar)))
+            # print('\tclose: {}\n\topen:{}\n\tbb_low: {}\n\tsar: {}\n\tlen_data: {}'
+            #       .format(close[-1], open[-1], bb[-1][-5:], sar[-5:], len(open)))
+
             if close_above_bb_l and up_sar and cross_bb_l and down_sar_pre:
-                return 5
+                return 5, result
             elif close_above_bb_l and up_sar and cross_bb_l:
-                return 4
+                return 5, result
             elif close_above_bb_l and cross_bb_l:
-                return 3
-        return -1
+                return 5, result
+        return -1, 5, result
 
 
 def launch_service():
@@ -556,7 +570,7 @@ class MyQuoteListener(iq.SilentQuoteListener):
     def process_summary(self, summary: np.array) -> None:
         # if is_server():
         #     if len(summary) > 0 and len(summary[0]) > 64 and summary[0][64] != self.summary_tick_id:
-        self.update_mongo.update_quote(summary)
+        self.update_mongo.update_quote(summary, self._name)
         #         self.summary_tick_id = summary[0][64]
 
         if verbose:
@@ -588,7 +602,7 @@ class MyQuoteListener(iq.SilentQuoteListener):
             pass
 
     def process_update(self, update: np.array) -> None:
-        self.update_mongo.update_quote(update)
+        self.update_mongo.update_quote(update, self._name)
 
         if verbose:
             print("%s: Data Update" % self._name)
