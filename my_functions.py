@@ -502,7 +502,8 @@ class UpdateMongo(object):
             print(symbol, end=": ")
             print("close_above:{} up_sar:{} cross_bb_b:{} down_sar:{} green_bar:{} len_sar: {}"
                   .format(close_above, up_sar, cross_bb_b, down_sar, green_bar, len(sar)))
-            print('     close: {}, open:{} bb_low: {}, sar: {} len_data: {}'.format(close[-1], open[-1], bb[-1][-1], sar[-1], len(open)))
+            print('\tclose: {}\n\topen:{}\n\tbb_low: {}\n\tsar: {}\n\tlen_data: {}'
+                  .format(close[-1], open[-1], bb[-1][-5:], sar[-5:], len(open)))
             if close_above and up_sar and cross_bb_b and down_sar:
                 return 5
             elif close_above and up_sar and cross_bb_b:
