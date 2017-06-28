@@ -411,9 +411,9 @@ class UpdateMongo(object):
         rebound, result = self.rebound(indicators, inputs, symbol)
         if rebound > 1.9:
             # print(result)
-            for k, v in result.items():
-                print(k, v)
             self.insert_possible_rebound_stock(symbol, name, rebound)
+            for k, v in result.items():
+                print('\t', k, v)
 
     def insert_possible_rebound_stock(self, symbol: str, name: str, rebound: float):
         rank = 100000
