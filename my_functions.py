@@ -416,7 +416,6 @@ class UpdateMongo(object):
             for future in concurrent.futures.as_completed(futures):
                 # print(str(future.result())[:100])
                 indicators[futures[future]] = future.result()
-        print(symbol, end=', ')
         rebound = self.rebound(indicators, inputs, symbol)
         if rebound > 1.9:
             self.insert_possible_rebound_stock(symbol, name, rebound)
