@@ -482,12 +482,14 @@ class UpdateMongo(object):
     def rebound(indicators: dict, inputs: dict) -> float:
         bb = indicators['bb']
         sar = indicators['sar']
+        open = inputs['open']
         close = inputs['close']
         low = inputs['low']
         close_above = bb[-1][-1] < close[-1]
         up_sar = sar[-1] > close[-1]
         down_sar = sar[-2] > close[-2]
         cross_bb_b = False
+        green_bar = inputs['close'][-1] > inputs['open'][-1]
 
         # check if cross bb b before last one
         for i in range(-2, -6, -1):
@@ -497,12 +499,13 @@ class UpdateMongo(object):
         print("close_above:{} up_sar:{} cross_bb_b:{} down_sar:{}".format(close_above, up_sar, cross_bb_b, down_sar))
         # sar rebound + cross bb b then close above
         # this is the best
-        if close_above and up_sar and cross_bb_b and down_sar:
-            return 5
-        elif close_above and up_sar and cross_bb_b:
-            return 4
-        elif close_above and cross_bb_b:
-            return 3
+        if green_bar:
+            if close_above and up_sar and cross_bb_b and down_sar:
+                return 5
+            elif close_above and up_sar and cross_bb_b:
+                return 4
+            elif close_above and cross_bb_b:
+                return 3
         return -1
 
 
