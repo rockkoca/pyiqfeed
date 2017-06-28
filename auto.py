@@ -52,8 +52,8 @@ if __name__ == "__main__":
     update_mongo = UpdateMongo()
     stocks = update_mongo.get_symbols()
     # print(stocks)
-    for stock in stocks:
-        print(stock['symbol'])
+    for stock in stocks.keys():
+        print(stock)
     bars = threading.Timer(5, get_live_multi_interval_bars, [stocks, 30, 1, False])
     bars.start()
 
