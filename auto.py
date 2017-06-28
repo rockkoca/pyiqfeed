@@ -56,7 +56,8 @@ if __name__ == "__main__":
     #     print(stock)
     for k, v in stocks.items():
         print(k)
-        stocks[k] = v['auto']['chart'] = 1
+        v['auto']['chart'] = 1
+        stocks[k] = v
     bars = threading.Timer(5, get_live_multi_interval_bars, [stocks, 30, 1, False])
     bars.start()
 
