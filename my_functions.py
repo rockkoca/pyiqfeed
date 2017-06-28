@@ -516,7 +516,7 @@ class UpdateMongo(object):
                 return 5, result
             elif close_above_bb_l and cross_bb_l:
                 return 5, result
-        return -1, 5, result
+        return -1, result
 
 
 def launch_service():
