@@ -500,6 +500,7 @@ class UpdateMongo(object):
             "close_above_bb_l": close_above_bb_l,
             "cross_bb_l": cross_bb_l,
             "down_sar_pre": down_sar_pre,
+            'up_sar': up_sar,
             "green_bar": green_bar,
 
         }
