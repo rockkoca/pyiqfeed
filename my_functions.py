@@ -440,6 +440,13 @@ class UpdateMongo(object):
         }
         stock = trader.instrument(symbol)
 
+        def log(info):
+            logs.insert({
+                'type': 'log',
+                'info': info,
+                'date': datetime.datetime.utcnow()
+            })
+
         if rebound > 4.5:  # the best so far
             rank = -100000
         elif rebound > 3.5:
@@ -451,17 +458,11 @@ class UpdateMongo(object):
         elif ins.find({'symbol': symbol}):  # check if the stock already in the watching list
             info = '{}, rebounding {}, already in watching list '.format(symbol, rebound)
             print(info)
-            logs.insert({
-                'type': 'log',
-                'info': info,
-            })
+            log(info)
         else:
             info = '{}, rebounding {}'.format(symbol, rebound)
             print(info)
-            logs.insert({
-                'type': 'log',
-                'info': info,
-            })
+            log(info)
             stock['auto'] = auto
             stock['rank'] = rank
             ins.insert(stock, True)
@@ -484,31 +485,31 @@ class UpdateMongo(object):
         open = inputs['open']
         close = inputs['close']
         low = inputs['low']
-        close_above = bb[-1][-1] < close[-1]
+        close_above_bb_l = bb[-1][-1] < close[-1]
         up_sar = sar[-1] < close[-1]
-        down_sar = sar[-2] > close[-2]
-        cross_bb_b = False
+        down_sar_pre = sar[-2] > close[-2]
+        cross_bb_l = False
         green_bar = inputs['close'][-1] > inputs['open'][-1]
 
         # check if cross bb b before last one
         for i in range(-2, -6, -1):
             if bb[-1][i] > low[i]:
-                cross_bb_b = True
+                cross_bb_l = True
                 break
 
         # sar rebound + cross bb b then close above
         # this is the best
         if green_bar:
             print(symbol, end=": ")
-            print("close_above:{} up_sar:{} cross_bb_b:{} down_sar:{} green_bar:{} len_sar: {}"
-                  .format(close_above, up_sar, cross_bb_b, down_sar, green_bar, len(sar)))
+            print("close_above_bb_l:{} up_sar:{} cross_bb_l:{} down_sar_pre:{} green_bar:{} len_sar: {}"
+                  .format(close_above_bb_l, up_sar, cross_bb_l, down_sar_pre, green_bar, len(sar)))
             print('\tclose: {}\n\topen:{}\n\tbb_low: {}\n\tsar: {}\n\tlen_data: {}'
                   .format(close[-1], open[-1], bb[-1][-5:], sar[-5:], len(open)))
-            if close_above and up_sar and cross_bb_b and down_sar:
+            if close_above_bb_l and up_sar and cross_bb_l and down_sar_pre:
                 return 5
-            elif close_above and up_sar and cross_bb_b:
+            elif close_above_bb_l and up_sar and cross_bb_l:
                 return 4
-            elif close_above and cross_bb_b:
+            elif close_above_bb_l and cross_bb_l:
                 return 3
         return -1
 
