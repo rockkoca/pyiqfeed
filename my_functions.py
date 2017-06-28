@@ -417,7 +417,7 @@ class UpdateMongo(object):
                 # print(str(future.result())[:100])
                 indicators[futures[future]] = future.result()
         print(symbol, end=', ')
-        rebound = self.rebound(indicators, inputs)
+        rebound = self.rebound(indicators, inputs, symbol)
         if rebound > 1.9:
             self.insert_possible_rebound_stock(symbol, name, rebound)
 
@@ -479,7 +479,7 @@ class UpdateMongo(object):
         return sar
 
     @staticmethod
-    def rebound(indicators: dict, inputs: dict) -> float:
+    def rebound(indicators: dict, inputs: dict, symbol: str) -> float:
         bb = indicators['bb']
         sar = indicators['sar']
         open = inputs['open']
@@ -500,6 +500,7 @@ class UpdateMongo(object):
         # sar rebound + cross bb b then close above
         # this is the best
         if green_bar:
+            print(symbol, end=": ")
             print("close_above:{} up_sar:{} cross_bb_b:{} down_sar:{} green_bar:{}"
                   .format(close_above, up_sar, cross_bb_b, down_sar, green_bar))
             print('     close: {}, open:{} bb_low: {}, sar: {}]'.format(close[-1], open[-1], bb[-1][-1], sar[-1]))
