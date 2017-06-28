@@ -47,9 +47,10 @@ if __name__ == "__main__":
     }
 
     # get sp500 stocks
-    stocks = get_sp500()
+    # stocks = get_sp500()
 
-
+    update_mongo = UpdateMongo()
+    stocks = update_mongo.get_symbols()
 
     bars = threading.Timer(5, get_live_multi_interval_bars, [stocks, 30, 1, False])
     bars.start()

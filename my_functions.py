@@ -84,15 +84,6 @@ def is_server() -> bool:
     return sys.platform != 'darwin'
 
 
-if sys.platform == 'darwin':
-    client = MongoClient("mongodb://localhost:3001")
-    db = client.meteor
-
-else:
-    client = MongoClient("mongodb://localhost:27017")
-    db = client.stock
-
-
 class UpdateMongo(object):
     def __init__(self):
         self.cache = {
