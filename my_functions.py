@@ -498,6 +498,7 @@ class UpdateMongo(object):
                 break
         print("close_above:{} up_sar:{} cross_bb_b:{} down_sar:{} green_bar:{}"
               .format(close_above, up_sar, cross_bb_b, down_sar, green_bar))
+        print('     close: {}, open:{} bb_low: {}, sar: {}]'.format(close[-1], open([-1], bb[-1][-1], sar[-1])))
         # sar rebound + cross bb b then close above
         # this is the best
         if green_bar:
