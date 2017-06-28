@@ -411,7 +411,7 @@ class UpdateMongo(object):
         rebound, result = self.rebound(indicators, inputs, symbol)
         if rebound > 1.9:
             # print(result)
-            for k, v in result:
+            for k, v in result.items():
                 print(k, v)
             self.insert_possible_rebound_stock(symbol, name, rebound)
 
@@ -438,7 +438,7 @@ class UpdateMongo(object):
         def log(info):
             logs.insert({
                 'type': 'log',
-                'info': info + " {}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())),
+                'info': info + " {}".format(time.strftime("%H:%M:%S", time.localtime())),
                 'date': datetime.datetime.utcnow()
             })
 
