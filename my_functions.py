@@ -416,6 +416,7 @@ class UpdateMongo(object):
             for future in concurrent.futures.as_completed(futures):
                 # print(str(future.result())[:100])
                 indicators[futures[future]] = future.result()
+        print(symbol, end=', ')
         rebound = self.rebound(indicators, inputs)
         if rebound > 1.9:
             self.insert_possible_rebound_stock(symbol, name, rebound)
@@ -465,7 +466,7 @@ class UpdateMongo(object):
             stock['auto'] = auto
             stock['rank'] = rank
             ins.insert(stock, True)
-        self.update_history_bars_after_done(symbol, name)
+            self.update_history_bars_after_done(symbol, name)
 
     @staticmethod
     def bb_calculator(sample):
