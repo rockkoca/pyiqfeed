@@ -516,9 +516,9 @@ class UpdateMongo(object):
             if close_above_bb_l and up_sar and cross_bb_l and down_sar_pre:
                 return 5, result
             elif close_above_bb_l and up_sar and cross_bb_l:
-                return 5, result
+                return 4, result
             elif close_above_bb_l and cross_bb_l:
-                return 5, result
+                return 3, result
         return -1, result
 
 
