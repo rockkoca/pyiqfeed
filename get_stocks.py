@@ -21,7 +21,7 @@ def get_sp500():
         symbols = bs.find_all('input', {'name': 'symbol'})
         # print(symbols)
         stocks = {}
-        for symbol in symbols[:10]:
+        for symbol in ['AMD', 'XIV', 'NVDA']:
             # print(symbol.attrs['value'])
             stocks[symbol.attrs['value']] = {
                 'auto': {
