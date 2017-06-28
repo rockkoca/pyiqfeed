@@ -486,7 +486,7 @@ class UpdateMongo(object):
         close = inputs['close']
         low = inputs['low']
         close_above = bb[-1][-1] < close[-1]
-        up_sar = sar[-1] > close[-1]
+        up_sar = sar[-1] < close[-1]
         down_sar = sar[-2] > close[-2]
         cross_bb_b = False
         green_bar = inputs['close'][-1] > inputs['open'][-1]
