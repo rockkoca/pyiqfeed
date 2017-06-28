@@ -496,7 +496,8 @@ class UpdateMongo(object):
             if bb[-1][i] > low[i]:
                 cross_bb_b = True
                 break
-        print("close_above:{} up_sar:{} cross_bb_b:{} down_sar:{}".format(close_above, up_sar, cross_bb_b, down_sar))
+        print("close_above:{} up_sar:{} cross_bb_b:{} down_sar:{} green_bar:{}"
+              .format(close_above, up_sar, cross_bb_b, down_sar, green_bar))
         # sar rebound + cross bb b then close above
         # this is the best
         if green_bar:
