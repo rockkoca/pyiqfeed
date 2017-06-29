@@ -17,5 +17,5 @@ class Lv1Lstener(MyQuoteListener):
             print(symbol, data['last'], data['volume'])
 
 
-lv1 = threading.Timer(5, get_level_1_multi_quotes_and_trades, [stocks, 1, False])
+lv1 = threading.Timer(5, get_level_1_multi_quotes_and_trades, [stocks, 1, False, Lv1Lstener])
 lv1.start()
