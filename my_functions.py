@@ -168,7 +168,7 @@ class UpdateMongo(object):
             # print(result)
 
     @staticmethod
-    def _process_quote(data: np.array) -> dict:
+    def process_quote(data: np.array) -> dict:
         if len(data) == 0:
             return {}
         else:
@@ -222,7 +222,7 @@ class UpdateMongo(object):
 
     def update_quote(self, data: np.array, name: str) -> None:
         col = self.db.quotes
-        dic = self._process_quote(data)
+        dic = self.process_quote(data)
         symbol = dic['symbol']
         update_meteor = name.startswith('auto_unwatch')
         if symbol == 'TOPS':
@@ -780,11 +780,12 @@ def get_level_1_quotes_and_trades(ticker: str, seconds: int, auto_unwatch=True):
         quote_conn.remove_listener(quote_listener)
 
 
-def get_level_1_multi_quotes_and_trades(tickers: dict, seconds: int, auto_unwatch=True):
+def get_level_1_multi_quotes_and_trades(tickers: dict, seconds: int, auto_unwatch=True, listener=None):
     """Get level 1 quotes and trades for ticker for seconds seconds."""
-
+    if not listener:
+        listener = MyQuoteListener
     quote_conn = MyQuote(name="{} pyiqfeed-lvl1".format('auto_unwatch' if auto_unwatch else 'auto_trade'))
-    quote_listener = MyQuoteListener("{} Level 1 Listener".format('auto_unwatch' if auto_unwatch else 'auto_trade'))
+    quote_listener = listener("{} Level 1 Listener".format('auto_unwatch' if auto_unwatch else 'auto_trade'))
     quote_conn.add_listener(quote_listener)
     print('get_level_1_quotes_and_trades ' + ('auto_unwatch' if auto_unwatch else 'auto_trade'))
 

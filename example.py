@@ -46,7 +46,7 @@ if __name__ == "__main__":
     # set_interval(check_connection, 5)
 
     # wait 10 till the service is started
-    threading.Timer(15, check_connection).start()
+    threading.Timer(30, check_connection).start()
 
     pool = {}
     #
