@@ -181,16 +181,20 @@ class UpdateMongo(object):
             rgn_quote["bid_price"] = str(fields[8])
             rgn_quote["bid_size"] = int(fields[11])
             rgn_quote['close'] = str(fields[15])
+            rgn_quote['delay'] = str(fields[20])
             rgn_quote['last'] = str(fields[22])
+            rgn_quote['last_date'] = str(fields[23])
+            rgn_quote['change'] = str(fields[27])
+            rgn_quote['change_from_open'] = str(fields[28])
             rgn_quote['high'] = str(fields[31])
             rgn_quote['low'] = str(fields[37])
             rgn_quote['tick_vol'] = int(fields[35])
             rgn_quote['volume'] = int(fields[65])
             rgn_quote['tick'] = int(fields[64])
 
-            dt = iq.field_readers.read_ccyymmdd(str(fields[43]).replace('-', ''))
-            dt = iq.field_readers.date_us_to_datetime(dt, int(fields[36]))
-            rgn_quote['tick_time'] = str(int(np.floor(dt.timestamp()))) + '000'
+            dt_temp = iq.field_readers.read_ccyymmdd(str(fields[43]).replace('-', ''))
+            dt_temp = iq.field_readers.date_us_to_datetime(dt_temp, int(fields[36]))
+            rgn_quote['tick_time'] = str(int(np.floor(dt_temp.timestamp()))) + '000'
             # rgn_quote["bidTime"] = fields[5]
 
             # rgn_quote["askTime"] = fields[8]

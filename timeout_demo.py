@@ -9,8 +9,17 @@ class Lv1Lstener(MyQuoteListener):
     def __init__(self, name: str):
         super().__init__(name)
         self.caches = {}
+        print(self.__class__, 'created')
 
     def process_update(self, update: np.array):
+        data = UpdateMongo.process_quote(update)
+        symbol = data['symbol']
+        if symbol not in self.caches:
+            print(symbol, data['last'], data['volume'])
+            self.caches[symbol] = 'printed'
+
+    def process_summary(self, update: np.array):
+        print(update)
         data = UpdateMongo.process_quote(update)
         symbol = data['symbol']
         if symbol not in self.caches:
