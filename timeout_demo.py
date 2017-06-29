@@ -15,6 +15,7 @@ class Lv1Lstener(MyQuoteListener):
         symbol = data['symbol']
         if symbol not in self.caches:
             print(symbol, data['last'], data['volume'])
+            self.caches[symbol] = 'printed'
 
 
 lv1 = threading.Timer(5, get_level_1_multi_quotes_and_trades, [stocks, 1, False, Lv1Lstener])
