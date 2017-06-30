@@ -421,9 +421,9 @@ class UpdateMongo(object):
         #         print('\t', k, v)
 
         up_trend, result = self.up_trend(indicators, inputs, symbol)
-        if up_trend > 4:
+        if up_trend > 5:
             # print(result)
-            self.insert_possible_rebound_stock(symbol, name, up_trend, 5)
+            self.insert_possible_rebound_stock(symbol, name, up_trend, 6.5, 4)
             for k, v in result.items():
                 print('\t', k, v)
 
@@ -513,8 +513,12 @@ class UpdateMongo(object):
         }
         result = sum(up_results.values())
         if above_high_line and all_green_bar:
+            result += 4
+        elif above_high_line:
+            result += 3
+        elif above_mid_line and all_green_bar:
             result += 2
-        elif above_high_line or above_mid_line:
+        elif above_mid_line:
             result += 1
 
         if up_results['last_bb_h_slope'] < 0 or up_results['last_close_slope'] < 0:
