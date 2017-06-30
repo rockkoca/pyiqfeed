@@ -420,7 +420,7 @@ class UpdateMongo(object):
         #     for k, v in result.items():
         #         print('\t', k, v)
 
-        up_trend, result = self.rebound(indicators, inputs, symbol)
+        up_trend, result = self.up_trend(indicators, inputs, symbol)
         if up_trend > 4:
             # print(result)
             self.insert_possible_rebound_stock(symbol, name, up_trend, 5)
