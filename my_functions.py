@@ -492,7 +492,7 @@ class UpdateMongo(object):
         open = inputs['open']
         close = inputs['close']
         low = inputs['low']
-        look_back = 3
+        look_back = 4
         min_slope = .02
         bb_h_back = bb_h[-look_back:]
         close_back = close[-look_back:]
