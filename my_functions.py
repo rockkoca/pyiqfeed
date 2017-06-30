@@ -24,6 +24,7 @@ import concurrent.futures
 import numpy as np
 from talib.abstract import *
 from talib import MA_Type
+from scipy import stats as st
 
 import robinhood.Robinhood as RB
 from robinhood.credentials import *
@@ -412,14 +413,21 @@ class UpdateMongo(object):
             for future in concurrent.futures.as_completed(futures):
                 # print(str(future.result())[:100])
                 indicators[futures[future]] = future.result()
-        rebound, result = self.rebound(indicators, inputs, symbol)
-        if rebound > 1.9:
+        # rebound, result = self.rebound(indicators, inputs, symbol)
+        # if rebound > 1.9:
+        #     # print(result)
+        #     self.insert_possible_rebound_stock(symbol, name, rebound)
+        #     for k, v in result.items():
+        #         print('\t', k, v)
+
+        up_trend, result = self.rebound(indicators, inputs, symbol)
+        if up_trend > 4:
             # print(result)
-            self.insert_possible_rebound_stock(symbol, name, rebound)
+            self.insert_possible_rebound_stock(symbol, name, up_trend, 5)
             for k, v in result.items():
                 print('\t', k, v)
 
-    def insert_possible_rebound_stock(self, symbol: str, name: str, rebound: float):
+    def insert_possible_rebound_stock(self, symbol: str, name: str, rebound: float, good=4.5, normal=3.5):
         rank = 100000
         ins = self.db.instruments
         logs = self.db.logs
@@ -446,9 +454,9 @@ class UpdateMongo(object):
                 'date': datetime.datetime.utcnow()
             })
 
-        if rebound > 4.5:  # the best so far
+        if rebound > good:  # the best so far
             rank = -100000
-        elif rebound > 3.5:
+        elif rebound > normal:
             rank = -10000
 
         if not stock or not stock['tradeable']:
@@ -476,6 +484,47 @@ class UpdateMongo(object):
     def sar_calculator(sample):
         sar = SAR(sample)
         return sar
+
+    @staticmethod
+    def up_trend(indicators: dict, inputs: dict, symbol: str) -> (float, dict):
+        bb_h, bb_m, bb_l = indicators['bb']
+        sar = indicators['sar']
+        open = inputs['open']
+        close = inputs['close']
+        low = inputs['low']
+        look_back = 4
+        min_slope = .02
+        bb_h_back = bb_h[-look_back:]
+        close_back = close[-look_back:]
+        open_back = open[-look_back:]
+        bb_m_back = bb_m[-look_back:]
+        last_bb_h_slope = st.linregress(np.arange(look_back), bb_h_back)
+        last_close_slope = st.linregress(np.arange(look_back), close_back)
+        above_mid_line = np.all((close_back - bb_m_back) > 0)  # all close above mid line
+        above_high_line = np.all((close_back - bb_h_back) > 0)  # all close above mid line
+        all_green_bar = np.all((close_back - open_back) > 0)  # all bars are green
+
+        up_results = {
+            "last_bb_h_slope": last_bb_h_slope[0] > min_slope,
+            "last_close_slope": last_close_slope[0] > min_slope,
+            "above_mid_line": above_mid_line,
+            "above_high_line": above_high_line,
+            "all_green_bar": all_green_bar,
+        }
+        result = sum(up_results.values())
+        if above_high_line and all_green_bar:
+            result += 2
+        elif above_high_line:
+            result += 1
+
+        if up_results['last_bb_h_slope'] < 0 or up_results['last_close_slope'] < 0:
+            result = -1
+
+        up_results['symbol'] = symbol
+        up_results['last_bb_h_slope'] = last_bb_h_slope
+        up_results['last_close_slope'] = last_close_slope
+
+        return result, up_results
 
     @staticmethod
     def rebound(indicators: dict, inputs: dict, symbol: str) -> (float, dict):
