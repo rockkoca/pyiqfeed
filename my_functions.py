@@ -492,8 +492,8 @@ class UpdateMongo(object):
         open = inputs['open']
         close = inputs['close']
         low = inputs['low']
-        look_back = 4
-        min_slope = .02
+        look_back = 3
+        min_slope = .002
         bb_h_back = bb_h[-look_back:]
         close_back = close[-look_back:]
         open_back = open[-look_back:]
@@ -503,16 +503,21 @@ class UpdateMongo(object):
         above_mid_line = np.all((close_back - bb_m_back) > 0)  # all close above mid line
         above_high_line = np.all((close_back - bb_h_back) > 0)  # all close above mid line
         all_green_bar = np.all((close_back - open_back) > 0)  # all bars are green
-
+        green_sar = np.all((sar[-look_back:] - close_back) < 0)
         up_results = {
             "last_bb_h_slope": last_bb_h_slope[0] > min_slope,
             "last_close_slope": last_close_slope[0] > min_slope,
             "above_mid_line": above_mid_line,
             "above_high_line": above_high_line,
             "all_green_bar": all_green_bar,
+            'green_sar': green_sar,
+            'time': time.strftime("%H:%M:%S", time.localtime())
         }
         result = sum(up_results.values())
-        if above_high_line and all_green_bar:
+
+        if not green_sar and up_results['last_bb_h_slope'] < 0 or up_results['last_close_slope'] < 0:
+            result = -1
+        elif above_high_line and all_green_bar:
             result += 4
         elif above_high_line:
             result += 3
@@ -520,9 +525,6 @@ class UpdateMongo(object):
             result += 2
         elif above_mid_line:
             result += 1
-
-        if up_results['last_bb_h_slope'] < 0 or up_results['last_close_slope'] < 0:
-            result = -1
 
         up_results['symbol'] = symbol
         up_results['last_bb_h_slope'] = last_bb_h_slope
