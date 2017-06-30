@@ -511,7 +511,6 @@ class UpdateMongo(object):
             "above_high_line": above_high_line,
             "all_green_bar": all_green_bar,
             'green_sar': green_sar,
-            'time': time.strftime("%H:%M:%S", time.localtime())
         }
         result = sum(up_results.values())
 
@@ -529,6 +528,7 @@ class UpdateMongo(object):
         up_results['symbol'] = symbol
         up_results['last_bb_h_slope'] = last_bb_h_slope
         up_results['last_close_slope'] = last_close_slope
+        up_results['time'] = time.strftime("%H:%M:%S", time.localtime())
 
         return result, up_results
 
