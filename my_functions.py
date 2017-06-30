@@ -514,7 +514,7 @@ class UpdateMongo(object):
         result = sum(up_results.values())
         if above_high_line and all_green_bar:
             result += 2
-        elif above_high_line:
+        elif above_high_line or above_mid_line:
             result += 1
 
         if up_results['last_bb_h_slope'] < 0 or up_results['last_close_slope'] < 0:
