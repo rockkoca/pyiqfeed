@@ -29,11 +29,11 @@ from scipy import stats as st
 import robinhood.Robinhood as RB
 from robinhood.credentials import *
 
-verbose = 1
+verbose = 0
 look_back_bars = 720
 
-trader = RB.Robinhood()
-trader.login(username=Credential.get_username(), password=Credential.get_password())
+# trader = RB.Robinhood()
+# trader.login(username=Credential.get_username(), password=Credential.get_password())
 
 
 def set_timeout(sec: float, func: object, *args, **kwargs) -> threading.Timer:
@@ -101,6 +101,9 @@ class UpdateMongo(object):
         else:
             self.client = MongoClient("mongodb://localhost:27017")
             self.db = self.client.stock
+
+    def get_client(self):
+        return self.client
 
     @staticmethod
     def default_bar_data(symbol, name):
@@ -262,7 +265,8 @@ class UpdateMongo(object):
                 },
                 True
             )
-            # print(result)
+            # print(dir(result))
+            # print(result.matched_count, result.row_result)
 
     @staticmethod
     def process_binary_symbol(s) -> str:
