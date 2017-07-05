@@ -234,7 +234,7 @@ class UpdateMongo(object):
         col = self.db.quotes
         dic = self.process_quote(data)
         symbol = dic['symbol']
-        print(symbol)
+        # print(symbol)
         update_meteor = name.startswith('auto_unwatch')
         if symbol == 'TOPS':
             return
@@ -258,14 +258,14 @@ class UpdateMongo(object):
 
             if new_dic['tick'] == old.get('tick', 0):
                 return
-            # if update_meteor
-            result = col.update_one(
-                {'symbol': new_dic['symbol']},
-                {
-                    "$set": new_dic,
-                },
-                True
-            )
+            if update_meteor:
+                result = col.update_one(
+                    {'symbol': new_dic['symbol']},
+                    {
+                        "$set": new_dic,
+                    },
+                    True
+                )
             # print(dir(result))
             # print(result.matched_count, result.row_result)
 
