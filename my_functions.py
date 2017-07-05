@@ -32,8 +32,8 @@ from robinhood.credentials import *
 verbose = 0
 look_back_bars = 720
 
-# trader = RB.Robinhood()
-# trader.login(username=Credential.get_username(), password=Credential.get_password())
+trader = RB.Robinhood()
+trader.login(username=Credential.get_username(), password=Credential.get_password())
 
 
 def set_timeout(sec: float, func: object, *args, **kwargs) -> threading.Timer:
@@ -234,6 +234,7 @@ class UpdateMongo(object):
         col = self.db.quotes
         dic = self.process_quote(data)
         symbol = dic['symbol']
+        print(symbol)
         update_meteor = name.startswith('auto_unwatch')
         if symbol == 'TOPS':
             return
@@ -270,7 +271,7 @@ class UpdateMongo(object):
 
     @staticmethod
     def process_binary_symbol(s) -> str:
-        return s.decode('ascii') if type(s) == bytes else s
+        return s.decode('ascii') if type(s) != str else s
 
     @staticmethod
     def process_bars(data: np.array) -> tuple:
