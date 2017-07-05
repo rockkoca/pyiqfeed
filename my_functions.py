@@ -361,7 +361,7 @@ class UpdateMongo(object):
         if not update_meteor and live:
             threading.Timer(.001, self.calculate_trend, [symbol, name]).start()
 
-        if not history and update_meteor:
+        if not history and (update_meteor or live):
             # old['bars'] = old['bars'].tolist()
             self.update_history_bars_after_done(symbol, name)
 
