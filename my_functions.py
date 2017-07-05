@@ -271,6 +271,7 @@ class UpdateMongo(object):
 
     @staticmethod
     def process_binary_symbol(s) -> str:
+        # TODO make sure this works for binary str
         return s.decode('ascii') if type(s) != str else s
 
     @staticmethod
