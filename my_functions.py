@@ -86,6 +86,8 @@ def is_server() -> bool:
 
 
 class UpdateMongo(object):
+    stop = 0
+
     def __init__(self):
         self.cache = {
             'bars': {},
@@ -125,7 +127,7 @@ class UpdateMongo(object):
         else:
             fields = data[0]
             rgn_quote = dict()
-            rgn_quote["symbol"] = fields[0].decode('ascii')
+            rgn_quote["symbol"] = UpdateMongo.process_binary_symbol(fields[0])
             rgn_quote["bid_price"] = str(fields[1])
             rgn_quote["bid_size"] = int(fields[2])
             # rgn_quote["bidTime"] = fields[5]
@@ -176,7 +178,7 @@ class UpdateMongo(object):
             fields = data[0]
             rgn_quote = dict()
             # print(fields)
-            rgn_quote["symbol"] = fields[0].decode('ascii')
+            rgn_quote["symbol"] = UpdateMongo.process_binary_symbol(fields[0])
             rgn_quote["ask_price"] = str(fields[1])
             rgn_quote["ask_size"] = int(fields[4])
             rgn_quote["bid_price"] = str(fields[8])
@@ -262,7 +264,12 @@ class UpdateMongo(object):
             )
             # print(result)
 
-    def _process_bars(self, data: np.array) -> tuple:
+    @staticmethod
+    def process_binary_symbol(s) -> str:
+        return s.decode('ascii') if type(s) == bytes else s
+
+    @staticmethod
+    def process_bars(data: np.array) -> tuple:
         if len(data) == 0:
             return '', np.array([])
         else:
@@ -277,10 +284,10 @@ class UpdateMongo(object):
             # bar['volume'] = str(fields[8])
             # bar['vol'] = fields[7]
             assert fields[4] >= fields[5]
-            return fields[0].decode('ascii'), \
+            return UpdateMongo.process_binary_symbol(fields[0]), \
                    np.array(
                        [
-                           str(int(self.tick_time(fields[1], fields[2]).timestamp())) + '000',
+                           str(int(UpdateMongo.tick_time(fields[1], fields[2]).timestamp())) + '000',
                            float(fields[3]),  # open
                            float(fields[4]),  # high
                            float(fields[5]),  # low
@@ -293,7 +300,11 @@ class UpdateMongo(object):
     def update_bars(self, data: np.array, name: str, history=False, live=False) -> None:
         col_ins = self.db.instruments
         col = self.db.bars
-        symbol, ndarray = self._process_bars(data)
+        symbol, ndarray = self.process_bars(data)
+        if len(ndarray) == 0:
+            print('empty bar')
+            return
+        # print('ndarray: ', ndarray)
         # symbol = dic['symbol']
         info = name.split('-')
         # assert symbol == info[0]
@@ -369,6 +380,8 @@ class UpdateMongo(object):
     def update_history_bars_after_done(self, symbol: str, name: str):
         col = self.db.bars
         temp = self.cache['bars'].get(symbol, self.default_bar_data(symbol, name))
+        if verbose:
+            print(temp)
         update_mongo_time = self.cache['update_mongo_time'].get(symbol, '0')
 
         # date + vol, vol is changing even if date is not changing
@@ -394,6 +407,7 @@ class UpdateMongo(object):
 
         data = self.cache['bars'][symbol]['bars']
         inputs = {
+            'time': data[0],
             "open": data[1],
             'high': data[2],
             'low': data[3],
@@ -413,24 +427,26 @@ class UpdateMongo(object):
             for future in concurrent.futures.as_completed(futures):
                 # print(str(future.result())[:100])
                 indicators[futures[future]] = future.result()
-        # rebound, result = self.rebound(indicators, inputs, symbol)
-        # if rebound > 1.9:
-        #     # print(result)
-        #     self.insert_possible_rebound_stock(symbol, name, rebound)
-        #     for k, v in result.items():
-        #         print('\t', k, v)
-
-        up_trend, result = self.up_trend(indicators, inputs, symbol)
-        if up_trend > 5:
+        rebound, result = self.rebound(indicators, inputs, symbol)
+        if rebound > 2.9:
             # print(result)
-            self.insert_possible_rebound_stock(symbol, name, up_trend, 6.5, 4)
+            self.insert_possible_rebound_stock(symbol, name, rebound)
             for k, v in result.items():
                 print('\t', k, v)
+
+                # up_trend, result = self.up_trend(indicators, inputs, symbol)
+                # if up_trend > 5:
+                #     # print(result)
+                #     self.insert_possible_rebound_stock(symbol, name, up_trend, 6.5, 4)
+                #     for k, v in result.items():
+                #         print('\t', k, v)
 
     def insert_possible_rebound_stock(self, symbol: str, name: str, rebound: float, good=4.5, normal=3.5):
         rank = 100000
         ins = self.db.instruments
         logs = self.db.logs
+        data = self.cache['bars'][symbol]['bars']
+
         auto = {
             'stop_profit': 0.01,
             'stop_lose': 0.01,
@@ -450,7 +466,9 @@ class UpdateMongo(object):
         def log(info):
             logs.insert({
                 'type': 'log',
-                'info': info + " {}".format(time.strftime("%H:%M:%S", time.localtime())),
+                'info': info + " {}".format(
+                    datetime.datetime.fromtimestamp(float(str(int(data[0][-1]))[:-3])).isoformat()
+                ),
                 'date': datetime.datetime.utcnow()
             })
 
@@ -462,10 +480,12 @@ class UpdateMongo(object):
         if not stock or not stock['tradeable']:
             print('none tradable stock {}'.format(symbol))
             return
-        elif ins.find({'symbol': symbol}):  # check if the stock already in the watching list
+        elif ins.find({'symbol': symbol}).count() != 0:  # check if the stock already in the watching list
             info = '{}, rebounding {}, already watching '.format(symbol, rebound)
             print(info)
             log(info)
+            self.update_history_bars_after_done(symbol, name)
+
         else:
             info = '{}, rebounding {}'.format(symbol, rebound)
             print(info)
@@ -474,16 +494,17 @@ class UpdateMongo(object):
             stock['rank'] = rank
             ins.insert(stock, True)
             self.update_history_bars_after_done(symbol, name)
+        UpdateMongo.stop = 15
 
     @staticmethod
     def bb_calculator(sample):
-        bb = BBANDS(sample, timeperiod=20, matype=MA_Type.T3)
+        bb = BBANDS(sample, 20, 2, 2)
         return bb
 
     @staticmethod
     def sar_calculator(sample):
-        sar = SAR(sample)
-        return sar
+        sar = SAREXT(sample)
+        return np.abs(sar)
 
     @staticmethod
     def up_trend(indicators: dict, inputs: dict, symbol: str) -> (float, dict):
@@ -493,7 +514,7 @@ class UpdateMongo(object):
         close = inputs['close']
         low = inputs['low']
         look_back = 3
-        min_slope = .002
+        min_slope = .005
         bb_h_back = bb_h[-look_back:]
         close_back = close[-look_back:]
         open_back = open[-look_back:]
@@ -514,7 +535,11 @@ class UpdateMongo(object):
         }
         result = sum(up_results.values())
 
-        if not green_sar and up_results['last_bb_h_slope'] < 0 or up_results['last_close_slope'] < 0:
+        # TODO open above upper line is not a buy!!!!!!!!!!!!!!!!!!!!
+        # TODO last one is red is not a buy!!!!!!!!!!!!!!!!!!!!
+        # TODO the new last two slope < old slope is not a buy
+
+        if not green_sar or not all_green_bar or last_bb_h_slope[0] < min_slope or last_close_slope[0] < min_slope:
             result = -1
         elif above_high_line and all_green_bar:
             result += 4
@@ -528,56 +553,57 @@ class UpdateMongo(object):
         up_results['symbol'] = symbol
         up_results['last_bb_h_slope'] = last_bb_h_slope
         up_results['last_close_slope'] = last_close_slope
-        up_results['time'] = time.strftime("%H:%M:%S", time.localtime())
+        up_results['time'] = datetime.datetime.fromtimestamp(float(str(int(inputs['time'][-1]))[:-3])).isoformat()
 
         return result, up_results
 
     @staticmethod
     def rebound(indicators: dict, inputs: dict, symbol: str) -> (float, dict):
-        bb = indicators['bb']
+        look_back = 8
+        bb_h, bb_m, bb_l = indicators['bb']
+        bb_l_lb = bb_l[-look_back:]
         sar = indicators['sar']
+        sar_lb = sar[-look_back:]
         open = inputs['open']
+        open_lb = open[-look_back:]
         close = inputs['close']
+        close_lb = close[-look_back:]
         low = inputs['low']
-        close_above_bb_l = bb[-1][-1] < close[-1]
+        low_lb = low[-look_back:]
+        close_above_bb_l = bb_l[-1] < close[-1]
         up_sar = sar[-1] < close[-1]
         down_sar_pre = sar[-2] > close[-2]
-        cross_bb_l = False
+        cross_bb_l = np.any(bb_l_lb >= low_lb)  # if any of pre four candles lower than the bb_l
         green_bar = inputs['close'][-1] > inputs['open'][-1]
 
-        # check if cross bb b before last one
-        for i in range(-2, -6, -1):
-            if bb[-1][i] > low[i]:
-                cross_bb_l = True
-                break
         result = {
             'symbol': symbol,
-            'open': open[-1],
-            'close': close[-1],
-            'bb_low': bb[-1][-5:],
-            'sar': sar[-5:],
+            'open': open_lb,
+            'close': close_lb,
+            'low': low_lb,
+            'bb_low': bb_l_lb,
+            'sar': sar_lb,
             "close_above_bb_l": close_above_bb_l,
             "cross_bb_l": cross_bb_l,
             "down_sar_pre": down_sar_pre,
             'up_sar': up_sar,
             "green_bar": green_bar,
-
+            'time': datetime.datetime.fromtimestamp(float(str(int(inputs['time'][-1]))[:-3])).isoformat()
         }
         # sar rebound + cross bb b then close above
         # this is the best
+
+        # TODO if several red before current bar, probably not a buy
+        # TODO 已经在中线上方并且前方为红色 bar, not a buy
+        # TODO 持续在中线上方爬升, another buy
         if green_bar:
-            # print(symbol, end=": ")
-            # print("close_above_bb_l:{} up_sar:{} cross_bb_l:{} down_sar_pre:{} green_bar:{} len_sar: {}"
-            #       .format(close_above_bb_l, up_sar, cross_bb_l, down_sar_pre, green_bar, len(sar)))
-            # print('\tclose: {}\n\topen:{}\n\tbb_low: {}\n\tsar: {}\n\tlen_data: {}'
-            #       .format(close[-1], open[-1], bb[-1][-5:], sar[-5:], len(open)))
 
             if close_above_bb_l and up_sar and cross_bb_l and down_sar_pre:
                 return 5, result
             elif close_above_bb_l and up_sar and cross_bb_l:
                 return 4, result
             elif close_above_bb_l and cross_bb_l:
-                return 3, result
+                return 2, result
         return -1, result
 
 
@@ -756,7 +782,7 @@ class MyBarListener(VerboseBarListener):
             print("%s: Process history bar:" % self._name)
         # print(bar_data)
         data = bar_data[0]
-        key = "{}:{}:{}".format(data[0], data[1], data[2])
+        # key = "{}:{}:{}".format(data[0], data[1], data[2])
         # if key not in history_cache or (key in history_cache and history_cache[key] != data[2]):
         # print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
         self.update_mongo.update_bars(bar_data, name=self._name, history=True)

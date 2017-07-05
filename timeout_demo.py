@@ -6,6 +6,7 @@ stocks = get_sp500()
 
 
 class Lv1Lstener(MyQuoteListener):
+    test = 0
     def __init__(self, name: str):
         super().__init__(name)
         self.caches = {}
@@ -27,5 +28,8 @@ class Lv1Lstener(MyQuoteListener):
             self.caches[symbol] = 'printed'
 
 
-lv1 = threading.Timer(5, get_level_1_multi_quotes_and_trades, [stocks, 1, False, Lv1Lstener])
-lv1.start()
+if __name__ == '__main__':
+    # lv1 = threading.Timer(5, get_level_1_multi_quotes_and_trades, [stocks, 1, False, Lv1Lstener])
+    # lv1.start()
+    Lv1Lstener.test = 1
+    print(Lv1Lstener.test)
