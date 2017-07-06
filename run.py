@@ -30,4 +30,9 @@ def run_command_with_timeout(cmd, timeout_sec=5, project_path=None):
 
 
 if __name__ == '__main__':
-    print(run_command_with_timeout('screen -ls'))
+    screens = run_command_with_timeout('screen -ls')
+    if screens.startswith('No Sockets found'):
+        # create new screen
+        pass
+    else:  # locate the screen
+        print(type(screens), screens)
