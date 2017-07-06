@@ -37,4 +37,4 @@ if __name__ == '__main__':
         pass
     else:  # locate the screen
         print(type(screens), screens)
-        print(re.search(r'[0-9]+\.stock', screens))
+        print(re.search(r'[0-9]+\.stock', screens).group())
