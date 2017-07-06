@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 from subprocess import *
+import re
 
 
 def run_command_with_timeout(cmd, timeout_sec=5, project_path=None):
@@ -36,3 +37,4 @@ if __name__ == '__main__':
         pass
     else:  # locate the screen
         print(type(screens), screens)
+        print(re.search(r'[0-9]+\.stock', screens))
