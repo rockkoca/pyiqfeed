@@ -34,6 +34,7 @@ if __name__ == '__main__':
     screens = run_command_with_timeout('screen -ls')
     if screens.startswith('No Sockets found'):
         # create new screen
+        print(run_command_with_timeout('screen -S stock', 0))
         pass
     else:  # locate the screen
         print(type(screens), screens)
