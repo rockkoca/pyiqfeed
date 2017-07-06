@@ -35,7 +35,7 @@ if __name__ == '__main__':
     if screens.startswith('No Sockets found'):
         # create new screen
         # print(run_command_with_timeout('screen -S stock', 0))
-        print('screen -S stock;python3 example.py')
+        print('screen -S stock\ncd pyiqfeed;git pull;python3 example.py')
         pass
     else:  # locate the screen
         # print(type(screens), screens)
