@@ -11,6 +11,7 @@ for more details.
 import sys
 import argparse
 import pyiqfeed as iq
+import datetime
 import numpy as np
 from typing import Sequence
 import time
@@ -29,7 +30,7 @@ from scipy import stats as st
 import robinhood.Robinhood as RB
 from robinhood.credentials import *
 
-verbose = 0
+verbose = 1
 look_back_bars = 720
 
 trader = RB.Robinhood()
@@ -87,12 +88,18 @@ def is_server() -> bool:
 
 class UpdateMongo(object):
     stop = 0
+    static_cache = {
+        'date': {}
+    }
 
     def __init__(self):
         self.cache = {
             'bars': {},
             'update_mongo_time': {},
-            'trend': {}
+            'trend': {},
+            'date': {},
+            'lv2': {},
+
         }
         if sys.platform == 'darwin':
             self.client = MongoClient("mongodb://localhost:3001")
@@ -174,6 +181,30 @@ class UpdateMongo(object):
             # print(result)
 
     @staticmethod
+    def _process_fundamentals(data: np.array) -> dict:
+        data = data[0].tolist()
+        fundamental = {}
+        for i, info in enumerate(data):
+            ty = type(info)
+            if ty == bytes:
+                info = UpdateMongo.process_binary_symbol(info)
+            if ty == datetime.datetime or ty == datetime.date:
+                info = str(info)
+            fundamental[QuoteConn.fundamental_keys[i]] = info
+        return fundamental
+
+    def update_fundamentals(self, data: np.array) -> None:
+        col = self.db.fundamentals
+        dic = self._process_fundamentals(data)
+        col.update_one(
+            {'symbol': dic['symbol']},
+            {
+                "$set": dic,
+            },
+            True
+        )
+
+    @staticmethod
     def process_quote(data: np.array) -> dict:
         if len(data) == 0:
             return {}
@@ -181,6 +212,12 @@ class UpdateMongo(object):
             fields = data[0]
             rgn_quote = dict()
             # print(fields)
+            # if str(fields[43]) in UpdateMongo.static_cache['date']:
+            #     dt_date = UpdateMongo.static_cache['date']
+            # else:
+            #     dt_date = iq.field_readers.read_ccyymmdd(str(fields[43]).replace('-', ''))
+            #     UpdateMongo.static_cache['date'] = dt_date
+
             rgn_quote["symbol"] = UpdateMongo.process_binary_symbol(fields[0])
             rgn_quote["ask_price"] = str(fields[1])
             rgn_quote["ask_size"] = int(fields[4])
@@ -190,6 +227,9 @@ class UpdateMongo(object):
             rgn_quote['delay'] = str(fields[20])
             rgn_quote['last'] = str(fields[22])
             rgn_quote['last_date'] = str(fields[23])
+            rgn_quote['last_market'] = str(fields[24])
+            rgn_quote['last_size'] = int(fields[25])
+            rgn_quote['last_time'] = UpdateMongo.tick_time_js_timestamp(str(fields[43]), int(fields[26]))
             rgn_quote['change'] = str(fields[27])
             rgn_quote['change_from_open'] = str(fields[28])
             rgn_quote['high'] = str(fields[31])
@@ -198,9 +238,10 @@ class UpdateMongo(object):
             rgn_quote['volume'] = int(fields[65])
             rgn_quote['tick'] = int(fields[64])
 
-            dt_temp = iq.field_readers.read_ccyymmdd(str(fields[43]).replace('-', ''))
-            dt_temp = iq.field_readers.date_us_to_datetime(dt_temp, int(fields[36]))
-            rgn_quote['tick_time'] = str(int(np.floor(dt_temp.timestamp()))) + '000'
+            # dt_datetime = iq.field_readers.date_us_to_datetime(dt_date, int(fields[36]))
+            #
+            # rgn_quote['tick_time'] = str(int(np.floor(dt_datetime.timestamp()))) + '000'
+            rgn_quote['tick_time'] = UpdateMongo.tick_time_js_timestamp(str(fields[43]), int(fields[36]))
             # rgn_quote["bidTime"] = fields[5]
 
             # rgn_quote["askTime"] = fields[8]
@@ -226,18 +267,29 @@ class UpdateMongo(object):
 
     @staticmethod
     def tick_time(yymmdd: str, us: int) -> datetime.datetime:
-        dt = iq.field_readers.read_ccyymmdd(str(yymmdd).replace('-', ''))
-        dt = iq.field_readers.date_us_to_datetime(dt, int(us))
+        if yymmdd in UpdateMongo.static_cache['date']:
+            dt_date = UpdateMongo.static_cache['date'][yymmdd]
+        else:
+            dt_date = iq.field_readers.read_ccyymmdd(yymmdd.replace('-', ''))
+            UpdateMongo.static_cache['date'][yymmdd] = dt_date
+        dt = iq.field_readers.date_us_to_datetime(dt_date, int(us))
         return dt
+
+    @staticmethod
+    def tick_time_js_timestamp(yymmdd: str, us: int) -> str:
+        return UpdateMongo.tick_time_timestamp(yymmdd, us) + '000'
+
+    @staticmethod
+    def tick_time_timestamp(yymmdd: str, us: int) -> str:
+        return str(int(np.floor(UpdateMongo.tick_time(yymmdd, us).timestamp())))
 
     def update_quote(self, data: np.array, name: str) -> None:
         col = self.db.quotes
         dic = self.process_quote(data)
+        # print(dic)
         symbol = dic['symbol']
         # print(symbol)
         update_meteor = name.startswith('auto_unwatch')
-        if symbol == 'TOPS':
-            return
         if dic:
             # print(dic)
             keys = list(dic.keys())
@@ -253,7 +305,7 @@ class UpdateMongo(object):
                 else:
                     if key in old:
                         new_dic[key] = old[key]
-            if 'low' not in new_dic:
+            if 'last_size' not in new_dic:
                 print(old, dic)
 
             if new_dic['tick'] == old.get('tick', 0):
@@ -266,8 +318,46 @@ class UpdateMongo(object):
                     },
                     True
                 )
-            # print(dir(result))
-            # print(result.matched_count, result.row_result)
+                # print(dir(result))
+                # print(result.matched_count, result.row_result)
+
+    def update_lv2(self, data: np.array, name: str) -> None:
+        col = self.db.lv2
+        dic = data[0]
+        # print(dic)
+        symbol = dic['symbol']
+        # print(symbol)
+        update_meteor = name.startswith('auto_unwatch')
+        if dic:
+            # print(dic)
+            keys = list(dic.keys())
+            new_dic = {}
+            old = col.find_one({'symbol': symbol})
+            # print(old)
+            if not old:
+                old = {}
+
+            for key in keys:
+                if dic[key] != 'nan' and dic[key]:
+                    new_dic[key] = dic[key]
+                else:
+                    if key in old:
+                        new_dic[key] = old[key]
+            if 'last_size' not in new_dic:
+                print(old, dic)
+
+            if new_dic['tick'] == old.get('tick', 0):
+                return
+            if update_meteor:
+                result = col.update_one(
+                    {'symbol': new_dic['symbol']},
+                    {
+                        "$set": new_dic,
+                    },
+                    True
+                )
+                # print(dir(result))
+                # print(result.matched_count, result.row_result)
 
     @staticmethod
     def process_binary_symbol(s) -> str:
@@ -293,7 +383,8 @@ class UpdateMongo(object):
             return UpdateMongo.process_binary_symbol(fields[0]), \
                    np.array(
                        [
-                           str(int(UpdateMongo.tick_time(fields[1], fields[2]).timestamp())) + '000',
+                           UpdateMongo.tick_time_js_timestamp(str(fields[1]), int(fields[2])),
+                           # str(int(UpdateMongo.tick_time(fields[1], fields[2]).timestamp())) + '000',
                            float(fields[3]),  # open
                            float(fields[4]),  # high
                            float(fields[5]),  # low
@@ -639,12 +730,22 @@ class MyQuote(iq.QuoteConn):
         print(super()._next_message())
 
 
+class MyLV2(iq.Lv2Conn):
+    def __init__(self, name: str = "LV2Conn", host: str = iq.FeedConn.host,
+                 port: int = iq.FeedConn.depth_port):
+        super().__init__(name, host, port)
+
+    def read_message(self):
+        super()._read_messages()
+        print(super()._next_message())
+
+
 class MyQuoteListener(iq.SilentQuoteListener):
     def __init__(self, name: str):
         super().__init__(name)
         self.update_mongo = UpdateMongo()
         self.summary_tick_id = {}
-        self.watches = {}
+        self.watches = set()
 
     def process_invalid_symbol(self, bad_symbol: str) -> None:
         if verbose:
@@ -703,9 +804,16 @@ class MyQuoteListener(iq.SilentQuoteListener):
             print(update)
 
     def process_fundamentals(self, fund: np.array) -> None:
+        self.update_mongo.update_fundamentals(fund)
         if verbose:
-            # print("%s: Fundamentals Received:" % self._name)
-            # print(fund)
+            print("%s: Fundamentals Received:" % self._name)
+            print(fund[0].tolist(), type(fund[0].tolist()[0]))
+            fund = fund[0].tolist()
+            # for i, info in enumerate(fund):
+            #     if type(info) == bytes:
+            #         info = UpdateMongo.process_binary_symbol(info)
+            #     print(QuoteConn.fundamental_keys[i], info)
+
             pass
 
     def process_auth_key(self, key: str) -> None:
@@ -748,6 +856,53 @@ class MyQuoteListener(iq.SilentQuoteListener):
 history_cache = {}
 
 
+class LV2Listener(MyQuoteListener):
+    def process_summary(self, summary: np.array) -> None:
+        summary = summary[0]
+
+        # if is_server():
+        #     if len(summary) > 0 and len(summary[0]) > 64 and summary[0][64] != self.summary_tick_id:
+        # self.update_mongo.update_quote(summary, self._name)
+        #         self.summary_tick_id = summary[0][64]
+        self.watches.add(summary['Symbol'])
+
+        if verbose or 1:
+            # print("%s: Data Summary\r" % self._name)
+            # print('\r', summary)
+            # for i, data in enumerate(summary[0]):
+            #     print(i, data)
+            print("%s: LV2 Data Summary" % self._name)
+            print(summary)
+            # if summary[64] != self.summary_tick_id:
+            #     print(
+            #         "symbol:{}, ask{}, size:{}, bid:{} size:{} close:{}, last: "
+            #         "{},high:{}, ?: {} tick_vol:{}, vol:{}, tick: {}".format(
+            #             summary[0],
+            #             summary[1],
+            #             summary[4],
+            #             summary[8],
+            #             summary[11],
+            #             summary[15],
+            #             summary[22],
+            #             summary[31],
+            #             summary[32],
+            #             summary[35],
+            #             summary[65],
+            #             summary[64]
+            #         ))
+            # self.summary_tick_id = summary[64]
+
+    def process_update(self, update: np.array) -> None:
+        summary = update[0]
+        self.watches.add(summary['Symbol'])
+
+        # self.update_mongo.update_quote(update, self._name)
+
+        if verbose or 1:
+            print("%s: LV2 Data Update" % self._name)
+            print(update)
+
+
 # noinspection PyMethodMayBeStatic,PyMissingOrEmptyDocstring
 class MyBarListener(VerboseBarListener):
     """
@@ -787,7 +942,7 @@ class MyBarListener(VerboseBarListener):
         if verbose:
             print("%s: Process history bar:" % self._name)
         # print(bar_data)
-        data = bar_data[0]
+        # data = bar_data[0]
         # key = "{}:{}:{}".format(data[0], data[1], data[2])
         # if key not in history_cache or (key in history_cache and history_cache[key] != data[2]):
         # print(UpdateMongo.tick_time(data[1], data[2]), UpdateMongo.tick_time(data[1], data[2]).timestamp(), data)
@@ -940,6 +1095,59 @@ def get_level_1_multi_quotes_and_trades(tickers: dict, seconds: int, auto_unwatc
         for stock in mongo_conn.get_symbols().keys():
             quote_conn.unwatch(stock)
         quote_conn.remove_listener(quote_listener)
+
+
+def get_level_2_multi_quotes_and_trades(tickers: dict, seconds: int, auto_unwatch=True, listener=None):
+    """Get level 1 quotes and trades for ticker for seconds seconds."""
+    if not listener:
+        listener = LV2Listener
+    lv2_conn = MyLV2(name="{} pyiqfeed-lvl2".format('auto_unwatch' if auto_unwatch else 'auto_trade'))
+    lv2_listener = listener("{} Level 2 Listener".format('auto_unwatch' if auto_unwatch else 'auto_trade'))
+    lv2_conn.add_listener(lv2_listener)
+    print('get_level_2_quotes_and_trades ' + ('auto_unwatch' if auto_unwatch else 'auto_trade'))
+
+    mongo_conn = UpdateMongo()
+    if auto_unwatch:
+        tickers = mongo_conn.get_symbols()
+
+    def remove_watch(symbol: str):
+        time.sleep(.5)
+        lv2_listener.watches.remove(symbol)
+
+    with iq.ConnConnector([lv2_conn]) as connector:
+        all_fields = sorted(list(iq.QuoteConn.quote_msg_map.keys()))
+        lv2_conn.select_update_fieldnames(all_fields)
+        i = 0
+        for ticker in tickers.keys():
+            if auto_unwatch and not tickers[ticker]['auto'].get('lv2', 0):
+                continue
+
+            lv2_conn.watch(ticker)
+            if i % 20 == 0:
+                time.sleep(3)
+            i += 1
+        lv2_conn.request_watches()
+        time.sleep(seconds)
+        while lv2_conn.reader_running():
+            if auto_unwatch:
+                stocks = mongo_conn.get_symbols()
+                # print(lv2_listener.watches)
+                for stock in stocks.keys():
+
+                    if not stocks[stock]['auto'].get('lv2', 0) and stock in lv2_listener.watches:
+                        lv2_conn.unwatch(stock)
+                        print('unwatch lv2 ', stock)
+                        remove_watch(stock)
+                    elif stocks[stock]['auto'].get('lv2', 0) and stock not in lv2_listener.watches:
+                        lv2_conn.watch(stock)
+                        print('watch lv2 ', stock)
+
+            # lv2_conn.request_watches()
+            time.sleep(seconds)
+
+        for stock in mongo_conn.get_symbols().keys():
+            lv2_conn.unwatch(stock)
+        lv2_conn.remove_listener(lv2_listener)
 
 
 def get_regional_quotes(ticker: str, seconds: int):

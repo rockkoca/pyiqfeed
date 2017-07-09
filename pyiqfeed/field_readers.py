@@ -36,11 +36,32 @@ def read_is_short_restricted(field: str) -> bool:
             return True
         else:
             return False
-        # else:
-        #     raise UnexpectedField(
-        #         "Unknown Value in Short Restricted Field: %s" % field)
+            # else:
+            #     raise UnexpectedField(
+            #         "Unknown Value in Short Restricted Field: %s" % field)
     else:
         return False
+
+
+def read_bool(field: str) -> bool:
+    """
+    For LV2:
+        End of Message Group	Single Character	A single character ('T' or 'F')
+        indicating that the message was the last messsage in a group of messages
+        received from the exchange at the same time.
+    """
+    return field == 'T'
+
+
+def read_condition_code(field: str) -> bool:
+    """
+    For LV2:
+        Code	Condition	Includes
+        52	regular	normal quotes, market maker opens, one sided quotes,
+            Ask Depth Quotes, Bid Depth Quotes, and Both Bid and Ask Depth Quotes
+        4C	non-regular	everything not included in regular
+    """
+    return field == '52'
 
 
 def read_tick_direction(field: str) -> np.int8:
@@ -172,6 +193,7 @@ def read_mmddccyy(field: str) -> np.datetime64:
 
 def read_ccyymmdd(field: str) -> np.datetime64:
     """Read a CCYYMMDD field and return a np.datetime64('D') type."""
+    field = field.replace('-', '')
     if field != "":
         year = int(field[0:4])
         month = int(field[4:6])

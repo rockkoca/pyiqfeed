@@ -273,6 +273,7 @@ class FeedConn:
         """
         err_msg = ("Unexpected message received by %s: %s" % (
             self.name(), ",".join(fields)))
+        print(err_msg)
         raise UnexpectedMessage(err_msg)
 
     def _process_system_message(self, fields: Sequence[str]) -> None:
@@ -547,6 +548,18 @@ class QuoteConn(FeedConn):
                           "Strike Price", "NAICS", "Exchange Root",
                           "Option Premium Multiplier",
                           "Option Multiple Deliverable"]
+
+    fundamental_keys = ['symbol', 'pe', 'average_volume', '52_week_high', '52_week_low', 'calendar_year_high',
+                        'calendar_year_low', 'dividend_yield', 'dividend_amount', 'dividend_rate', 'pay_date',
+                        'ex-dividend_date', 'short_interest', 'current_year_eps', 'next_year_eps',
+                        'five-year_growth_percentage', 'fiscal_year_end', 'company_name', 'root_option_symbol',
+                        'percent_held_by_institutions', 'beta', 'leaps', 'current_assets', 'current_liabilities',
+                        'balance_sheet_date', 'long-term_debt', 'common_shares_outstanding', 'split_factor_1_date',
+                        'split_factor_1', 'split_factor_2_date', 'split_factor_2', 'format_code', 'precision', 'sic',
+                        'historical_volatility', 'security_type', 'listed_market', '52_week_high_date',
+                        '52_week_low_date', 'calendar_year_high_date', 'calendar_year_low_date', 'year_end_close',
+                        'maturity_date', 'coupon_rate', 'expiration_date', 'strike_price', 'naics', 'exchange_root',
+                        'option_premium_multiplier', 'option_multiple_deliverable']
 
     # Type of numpy structured array used to return fundamental data.
     fundamental_type = [('Symbol', 'S128'), ('PE', 'f8'),
@@ -3144,7 +3157,7 @@ class BarConn(FeedConn):
         fields = fields[2:]
 
         for i in range(0, len(fields), 3):
-            info = fields[i:i+3]
+            info = fields[i:i + 3]
             symbol = info[0]
             interval = info[1]
             request_id = info[2]
@@ -3609,3 +3622,120 @@ class NewsConn(FeedConn):
                 err_msg = "Request: %s, Error: %s" % (req_cmd, str(xml_data[0]))
                 raise RuntimeError(err_msg)
         return self._create_story_counts(xml_data)
+
+
+class Lv2Conn(QuoteConn):
+    host = FeedConn.host
+    port = FeedConn.depth_port
+
+    # Type of numpy structured array used to return regional quotes.
+    regional_type = np.dtype([('Symbol', 'S64'),
+                              ('Market Maker', 'S64'),
+                              ('Bid', 'f8'),
+                              ('BidSize', 'u8'),
+                              ('Ask', 'f8'),
+                              ('AskSize', 'u8'),
+                              ('BidTime', 'u8'),
+                              ('Date', 'u8'),
+                              ('AskTime', 'u8'),
+                              ('Condition Code', 'S64'),
+                              ('BidInfoValid', 'u1'),
+                              ('AskInfoValid', 'u2'),
+                              ('End of Message Group', 'u2'),
+                              ])
+
+    quote_msg_map = {'Symbol': ('Symbol', 'S128', lambda x: x),
+                     'Market Maker':
+                         ('Market Maker', 'S128', lambda x: x),
+                     'Bid': ('Bid', 'f8', fr.read_float64),
+                     'Ask': ('Ask', 'f8', fr.read_float64),
+                     'Bid Size': ('Bid Size', 'u8', fr.read_uint64),
+                     'Ask Size': ('Ask Size', 'u8', fr.read_uint64),
+                     'Bid Time': ('Bid Time', 'u8', fr.read_hhmmssus),
+                     'Bid Date':
+                         ('Bid Date', 'M8[D]', fr.read_ccyymmdd),
+                     'Ask Time': ('Ask Time', 'u8', fr.read_hhmmssus),
+                     'Condition Code': ('Condition', 'b1', fr.read_condition_code),
+                     'BidInfoValid':
+                         ('BidInfoValid', 'b1', fr.read_bool),
+                     'AskInfoValid':
+                         ('AskInfoValid', 'b1', fr.read_bool),
+                     'End of Message Group':
+                         ('End of Message Group', 'b1', fr.read_bool),
+                     }
+
+    def __init__(self, name: str = "LV2Conn", host: str = FeedConn.host,
+                 port: int = port):
+        super().__init__(name, host, port)
+        self._current_update_fields = []
+        self._update_names = []
+        self._update_dtype = []
+        self._set_message_mappings()
+        self._current_update_fields = ["Symbol",
+                                       "Market Maker",
+                                       "Bid",
+                                       "Ask",
+                                       "Bid Size",
+                                       "Ask Size",
+                                       "Bid Time",
+                                       "Bid Date",
+                                       "Condition Code",
+                                       "Ask Time",
+                                       "BidInfoValid",
+                                       "AskInfoValid",
+                                       "End of Message Group",
+                                       ]
+        # print(self.quote_msg_map)
+        # for k in self._current_update_fields:
+        #     print(self.quote_msg_map[k])
+        self._update_names = self._current_update_fields
+        self._update_reader = [self.quote_msg_map[k][2] for k in self._current_update_fields]
+
+        self._num_update_fields = len(self._current_update_fields)
+        # self._set_current_update_structs(self._current_update_fields)
+
+        self._empty_fundamental_msg = np.zeros(
+            1, dtype=QuoteConn.fundamental_type)
+        self._empty_regional_msg = np.zeros(1, dtype=QuoteConn.regional_type)
+
+    def _set_message_mappings(self) -> None:
+        """Creates map of message processing functions."""
+        super()._set_message_mappings()
+        self._pf_dict['M'] = self._process_market_maker_query
+        self._pf_dict['Z'] = self._process_summary
+        self._pf_dict['2'] = self._process_update
+        self._pf_dict['O'] = self._process_depeprecated_message
+
+    def _process_market_maker_query(self, fields: Sequence[str]):
+        print('_process_market_maker_query', fields)
+
+    def _process_depeprecated_message(self, fields: Sequence[str]):
+        print('_process_depeprecated_messagef', fields)
+        pass
+
+    def _process_summary(self, fields: Sequence[str]) -> None:
+        """Process a symbol summary message"""
+        assert len(fields) > 2
+        assert fields[0] == "Z"
+        update = self._create_update(fields)
+        for listener in self._listeners:
+            listener.process_summary(update)
+
+    def _process_update(self, fields: Sequence[str]) -> None:
+        """Process a symbol update message."""
+        assert len(fields) > 2
+        assert fields[0] == "2"
+        update = self._create_update(fields)
+        for listener in self._listeners:
+            listener.process_update(update)
+
+    def _create_update(self, fields: Sequence[str]) -> np.array:
+        """Create an update message."""
+        update = {}
+        for field_num, field in enumerate(fields[1:]):
+            if field_num >= self._num_update_fields and not field:
+                break
+            # print(fields)
+            # print(field_num, self._num_update_fields, field, self._update_reader[field_num](field))
+            update[self._update_names[field_num]] = self._update_reader[field_num](field)
+        return update,
