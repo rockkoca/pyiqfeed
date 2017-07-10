@@ -352,11 +352,12 @@ class UpdateMongo(object):
         symbol = dic['symbol']
         # print(symbol)
         update_meteor = name.startswith('auto_unwatch')
-        bid = dic['bidinfovalid']
-        ask = dic['askinfovalid']
+
         if dic:
             # print(dic)
             keys = list(dic.keys())
+            bid = dic['bidinfovalid']
+            ask = dic['askinfovalid']
             # old = col.find_one({'symbol': symbol})
             old = self.cache['lv2'].get(symbol, {})
             # print(old)
