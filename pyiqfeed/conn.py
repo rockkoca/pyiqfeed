@@ -3647,10 +3647,14 @@ class Lv2Conn(QuoteConn):
     quote_msg_map = {'Symbol': ('Symbol', 'S128', lambda x: x),
                      'Market Maker':
                          ('Market Maker', 'S128', lambda x: x),
-                     'Bid': ('Bid', 'f8', fr.read_float64),
-                     'Ask': ('Ask', 'f8', fr.read_float64),
-                     'Bid Size': ('Bid Size', 'u8', fr.read_uint64),
-                     'Ask Size': ('Ask Size', 'u8', fr.read_uint64),
+                     # 'Bid': ('Bid', 'f8', fr.read_float64),
+                     # 'Ask': ('Ask', 'f8', fr.read_float64),
+                     'Bid': ('Bid', 'f8', lambda x: float(x)),
+                     'Ask': ('Ask', 'f8', lambda x: float(x)),
+                     # 'Bid Size': ('Bid Size', 'u8', fr.read_uint64),
+                     # 'Ask Size': ('Ask Size', 'u8', fr.read_uint64),
+                     'Bid Size': ('Bid Size', 'u8', lambda x: int(x)),
+                     'Ask Size': ('Ask Size', 'u8', lambda x: int(x)),
                      'Bid Time': ('Bid Time', 'u8', fr.read_hhmmssus),
                      'Bid Date':
                          ('Bid Date', 'M8[D]', fr.read_ccyymmdd),
@@ -3685,10 +3689,14 @@ class Lv2Conn(QuoteConn):
                                        "AskInfoValid",
                                        "End of Message Group",
                                        ]
+
+        self._current_update_fields_keys = ['symbol', 'MMID', 'bid', 'ask', 'bid_size', 'ask_size', 'bid_time',
+                                            'bid_date', 'condition_code', 'ask_time', 'bidinfovalid', 'askinfovalid',
+                                            'end_of_message_group']
         # print(self.quote_msg_map)
         # for k in self._current_update_fields:
         #     print(self.quote_msg_map[k])
-        self._update_names = self._current_update_fields
+        self._update_names = self._current_update_fields_keys
         self._update_reader = [self.quote_msg_map[k][2] for k in self._current_update_fields]
 
         self._num_update_fields = len(self._current_update_fields)
@@ -3731,6 +3739,7 @@ class Lv2Conn(QuoteConn):
 
     def _create_update(self, fields: Sequence[str]) -> np.array:
         """Create an update message."""
+        print(fields)
         update = {}
         for field_num, field in enumerate(fields[1:]):
             if field_num >= self._num_update_fields and not field:

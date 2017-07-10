@@ -321,9 +321,31 @@ class UpdateMongo(object):
                 # print(dir(result))
                 # print(result.matched_count, result.row_result)
 
-    def update_lv2(self, data: np.array, name: str) -> None:
+    @staticmethod
+    def _process_lv2(data: dict) -> dict:
+        print(data)
+        # data = data[0].tolist()
+        date = str(data['bid_date'].tolist())
+        bid_time = min(85400000000, int(data['bid_time']))
+        ask_time = min(85400000000, int(data['ask_time']))
+        data['bid_time'] = UpdateMongo.tick_time_js_timestamp(date, bid_time)
+        data['ask_time'] = UpdateMongo.tick_time_js_timestamp(date, ask_time)
+        data['bid_date'] = date
+        data['ask_date'] = date
+        print(data)
+
+        # for i, info in enumerate(data):
+        #     ty = type(info)
+        #     if ty == bytes:
+        #         info = UpdateMongo.process_binary_symbol(info)
+        #     if ty == datetime.datetime or ty == datetime.date:
+        #         info = str(info)
+        #     fundamental[QuoteConn.fundamental_keys[i]] = info
+        return data
+
+    def update_lv2(self, data: dict, name: str) -> None:
         col = self.db.lv2
-        dic = data[0]
+        dic = self._process_lv2(data)
         # print(dic)
         symbol = dic['symbol']
         # print(symbol)
@@ -331,33 +353,81 @@ class UpdateMongo(object):
         if dic:
             # print(dic)
             keys = list(dic.keys())
-            new_dic = {}
-            old = col.find_one({'symbol': symbol})
+            # old = col.find_one({'symbol': symbol})
+            old = self.cache['lv2'].get(symbol, {})
             # print(old)
+            bid = dic['bidinfovalid']
+            ask = dic['askinfovalid']
+            mmid = dic['MMID']
+
             if not old:
-                old = {}
+                new_dic = {
+                    mmid: dic
+                }
+            else:
+                new_dic = old
 
-            for key in keys:
-                if dic[key] != 'nan' and dic[key]:
-                    new_dic[key] = dic[key]
+                if mmid not in new_dic:
+                    new_dic[mmid] = dic
                 else:
-                    if key in old:
-                        new_dic[key] = old[key]
-            if 'last_size' not in new_dic:
-                print(old, dic)
+                    old_dic = new_dic.get(mmid)
+                    for key in keys:
+                        if (ask and key.startswith('ask')) or (bid and key.startswith('bid')):
+                            new_dic[mmid][key] = dic[key]
+                        else:
+                            new_dic[mmid][key] = old_dic.get(key, dic[key])
+            #
+            # for k, v in new_dic.items():
+            #     print(type(v))
 
-            if new_dic['tick'] == old.get('tick', 0):
-                return
+            self.cache['lv2'][symbol] = new_dic
+
             if update_meteor:
+                # TODO create a best data structure for the web
+                lv2 = {
+                    'bids': {},
+                    'asks': {}
+                }
+                # symbol', 'MMID', 'bid', 'ask', 'bid_size', 'ask_size', 'bidinfovalid', 'askinfovalid'
+                for val in new_dic.values():
+
+                    if val['bidinfovalid']:
+                        bid = val['bid']
+                        lv2['bids'][bid] = lv2['bids'].get(bid, 0) + val['bid_size']
+
+                    if val['askinfovalid']:
+                        ask = val['ask']
+                        lv2['asks'][ask] = lv2['asks'].get(ask, 0) + val['ask_size']
+
+                lv2['symbol'] = symbol
+
+                lv2['bids_order'] = sorted(list(lv2['bids'].keys()), reverse=True)
+                lv2['asks_order'] = sorted(list(lv2['asks'].keys()))
+                #
+                # lv2['bids_total'] = sum(lv2['bids'].values())
+                # lv2['asks_total'] = sum(lv2['asks'].values())
+                print(lv2)
+                result = {
+                    'symbol': symbol,
+                    'bids': lv2['bids_order'],
+                    'bids_price': [lv2['bids'][price] for price in lv2['bids_order']],
+                    'asks': lv2['asks_order'],
+                    'asks_price': [lv2['asks'][price] for price in lv2['asks_order']],
+                    'bids_total': sum(lv2['bids'].values()),
+                    'asks_total': sum(lv2['asks'].values())
+                }
+
+                print(result)
                 result = col.update_one(
-                    {'symbol': new_dic['symbol']},
+                    {'symbol': symbol},
                     {
-                        "$set": new_dic,
+                        "$set": result,
                     },
                     True
                 )
                 # print(dir(result))
                 # print(result.matched_count, result.row_result)
+                pass
 
     @staticmethod
     def process_binary_symbol(s) -> str:
@@ -859,12 +929,13 @@ history_cache = {}
 class LV2Listener(MyQuoteListener):
     def process_summary(self, summary: np.array) -> None:
         summary = summary[0]
+        self.update_mongo.update_lv2(summary, self._name)
 
         # if is_server():
         #     if len(summary) > 0 and len(summary[0]) > 64 and summary[0][64] != self.summary_tick_id:
         # self.update_mongo.update_quote(summary, self._name)
         #         self.summary_tick_id = summary[0][64]
-        self.watches.add(summary['Symbol'])
+        self.watches.add(summary['symbol'])
 
         if verbose or 1:
             # print("%s: Data Summary\r" % self._name)
@@ -894,7 +965,8 @@ class LV2Listener(MyQuoteListener):
 
     def process_update(self, update: np.array) -> None:
         summary = update[0]
-        self.watches.add(summary['Symbol'])
+        self.update_mongo.update_lv2(summary, self._name)
+        self.watches.add(summary['symbol'])
 
         # self.update_mongo.update_quote(update, self._name)
 
