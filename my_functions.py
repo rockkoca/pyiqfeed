@@ -1176,7 +1176,7 @@ def get_level_2_multi_quotes_and_trades(tickers: dict, seconds: int, auto_unwatc
     lv2_conn = MyLV2(name="{} pyiqfeed-lvl2".format('auto_unwatch' if auto_unwatch else 'auto_trade'))
     lv2_listener = listener("{} Level 2 Listener".format('auto_unwatch' if auto_unwatch else 'auto_trade'))
     lv2_conn.add_listener(lv2_listener)
-    print('get_level_2_quotes_and_trades ' + ('auto_unwatch' if auto_unwatch else 'auto_trade'))
+    # print('get_level_2_quotes_and_trades ' + ('auto_unwatch' if auto_unwatch else 'auto_trade'))
 
     mongo_conn = UpdateMongo()
     if auto_unwatch:
