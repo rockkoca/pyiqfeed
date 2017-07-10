@@ -231,6 +231,7 @@ class UpdateMongo(object):
             rgn_quote['last_size'] = int(fields[25])
             rgn_quote['last_time'] = UpdateMongo.tick_time_js_timestamp(str(fields[43]), int(fields[26]))
             rgn_quote['change'] = str(fields[27])
+            rgn_quote['open'] = str(abs(fields[27]-fields[22]))
             rgn_quote['change_from_open'] = str(fields[28])
             rgn_quote['high'] = str(fields[31])
             rgn_quote['low'] = str(fields[37])
