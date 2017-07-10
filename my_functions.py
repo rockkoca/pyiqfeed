@@ -99,6 +99,7 @@ class UpdateMongo(object):
             'trend': {},
             'date': {},
             'lv2': {},
+            'lv2_result': {},
 
         }
         if sys.platform == 'darwin':
@@ -231,7 +232,7 @@ class UpdateMongo(object):
             rgn_quote['last_size'] = int(fields[25])
             rgn_quote['last_time'] = UpdateMongo.tick_time_js_timestamp(str(fields[43]), int(fields[26]))
             rgn_quote['change'] = str(fields[27])
-            rgn_quote['open'] = str(abs(fields[27]-fields[22]))
+            rgn_quote['open'] = str(abs(fields[27] - fields[22]))
             rgn_quote['change_from_open'] = str(fields[28])
             rgn_quote['high'] = str(fields[31])
             rgn_quote['low'] = str(fields[37])
@@ -351,16 +352,17 @@ class UpdateMongo(object):
         symbol = dic['symbol']
         # print(symbol)
         update_meteor = name.startswith('auto_unwatch')
+        bid = dic['bidinfovalid']
+        ask = dic['askinfovalid']
         if dic:
             # print(dic)
             keys = list(dic.keys())
             # old = col.find_one({'symbol': symbol})
             old = self.cache['lv2'].get(symbol, {})
             # print(old)
-            bid = dic['bidinfovalid']
-            ask = dic['askinfovalid']
-            mmid = dic['MMID']
 
+            mmid = dic['MMID']
+            old_mmid_data = {}
             if not old:
                 new_dic = {
                     mmid: dic
@@ -372,6 +374,7 @@ class UpdateMongo(object):
                     new_dic[mmid] = dic
                 else:
                     old_dic = new_dic.get(mmid)
+                    old_mmid_data = old_dic.copy()
                     for key in keys:
                         if (ask and key.startswith('ask')) or (bid and key.startswith('bid')):
                             new_dic[mmid][key] = dic[key]
@@ -385,40 +388,56 @@ class UpdateMongo(object):
 
             if update_meteor:
                 # TODO create a best data structure for the web
-                lv2 = {
-                    'bids': {},
-                    'asks': {}
-                }
-                # symbol', 'MMID', 'bid', 'ask', 'bid_size', 'ask_size', 'bidinfovalid', 'askinfovalid'
-                for val in new_dic.values():
+                result = self.cache['lv2_result'].get(symbol, {})
 
-                    if val['bidinfovalid']:
-                        bid = val['bid']
-                        lv2['bids'][bid] = lv2['bids'].get(bid, 0) + val['bid_size']
+                if result and old_mmid_data and ((bid and dic['bid'] == old_mmid_data['bid'])
+                                                 or (ask and dic['ask'] == old_mmid_data['ask'])):
 
-                    if val['askinfovalid']:
-                        ask = val['ask']
-                        lv2['asks'][ask] = lv2['asks'].get(ask, 0) + val['ask_size']
+                    if bid:
+                        result['bids_price'][result['bids'].index(dic['bid'])] += \
+                            dic['bid_size'] - old_mmid_data['bid_size']
+                    else:
+                        if bid:
+                            result['asks_price'][result['asks'].index(dic['ask'])] += \
+                                dic['ask_size'] - old_mmid_data['ask_size']
 
-                lv2['symbol'] = symbol
+                else:
 
-                lv2['bids_order'] = sorted(list(lv2['bids'].keys()), reverse=True)
-                lv2['asks_order'] = sorted(list(lv2['asks'].keys()))
-                #
-                # lv2['bids_total'] = sum(lv2['bids'].values())
-                # lv2['asks_total'] = sum(lv2['asks'].values())
-                print(lv2)
-                result = {
-                    'symbol': symbol,
-                    'bids': lv2['bids_order'],
-                    'bids_price': [lv2['bids'][price] for price in lv2['bids_order']],
-                    'asks': lv2['asks_order'],
-                    'asks_price': [lv2['asks'][price] for price in lv2['asks_order']],
-                    'bids_total': sum(lv2['bids'].values()),
-                    'asks_total': sum(lv2['asks'].values())
-                }
+                    lv2 = {
+                        'bids': {},
+                        'asks': {}
+                    }
+                    # symbol', 'MMID', 'bid', 'ask', 'bid_size', 'ask_size', 'bidinfovalid', 'askinfovalid'
+                    for val in new_dic.values():
 
-                print(result)
+                        if val['bidinfovalid']:
+                            bid = val['bid']
+                            lv2['bids'][bid] = lv2['bids'].get(bid, 0) + val['bid_size']
+
+                        if val['askinfovalid']:
+                            ask = val['ask']
+                            lv2['asks'][ask] = lv2['asks'].get(ask, 0) + val['ask_size']
+
+                    lv2['symbol'] = symbol
+
+                    lv2['bids_order'] = sorted(list(lv2['bids'].keys()), reverse=True)
+                    lv2['asks_order'] = sorted(list(lv2['asks'].keys()))
+                    #
+                    # lv2['bids_total'] = sum(lv2['bids'].values())
+                    # lv2['asks_total'] = sum(lv2['asks'].values())
+                    # print(lv2)
+                    result = {
+                        'symbol': symbol,
+                        'bids': lv2['bids_order'],
+                        'bids_price': [lv2['bids'][price] for price in lv2['bids_order']],
+                        'asks': lv2['asks_order'],
+                        'asks_price': [lv2['asks'][price] for price in lv2['asks_order']],
+                        'bids_total': sum(lv2['bids'].values()),
+                        'asks_total': sum(lv2['asks'].values())
+                    }
+
+                self.cache['lv2_result'][symbol] = result
+                # print(result)
                 result = col.update_one(
                     {'symbol': symbol},
                     {
