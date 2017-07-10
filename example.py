@@ -56,8 +56,8 @@ if __name__ == "__main__":
     lv1 = threading.Timer(5, get_level_1_multi_quotes_and_trades, [{}, 1, True])
     lv1.start()
 
-    lv2 = threading.Timer(5, get_level_2_multi_quotes_and_trades, [{}, 1, True])
-    lv2.start()
+    # lv2 = threading.Timer(5, get_level_2_multi_quotes_and_trades, [{}, 1, True])
+    # lv2.start()
 
     while 1:
         time.sleep(1)
