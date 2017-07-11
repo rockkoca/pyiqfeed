@@ -325,7 +325,7 @@ class UpdateMongo(object):
 
     @staticmethod
     def _process_lv2(data: dict) -> dict:
-        print(data)
+        # print(data)
         # data = data[0].tolist()
         date = str(data['bid_date'].tolist())
         bid_time = min(85400000000, int(data['bid_time']))
@@ -334,7 +334,7 @@ class UpdateMongo(object):
         data['ask_time'] = UpdateMongo.tick_time_js_timestamp(date, ask_time)
         data['bid_date'] = date
         data['ask_date'] = date
-        print(data)
+        # print(data)
 
         # for i, info in enumerate(data):
         #     ty = type(info)
@@ -390,18 +390,18 @@ class UpdateMongo(object):
             if update_meteor:
                 # TODO create a best data structure for the web
                 result = self.cache['lv2_result'].get(symbol, {})
+                bids = result['bids']
+                asks = result['asks']
+                if result and old_mmid_data and ((bid and bids and dic['bid'] == bids[0] == old_mmid_data['bid'])
+                                                 or (ask and asks and dic['ask'] == asks[0] == old_mmid_data['bid'])):
 
-                if result and old_mmid_data and ((bid and dic['bid'] == old_mmid_data['bid'])
-                                                 or (ask and dic['ask'] == old_mmid_data['ask'])):
-
-                    if bid:
-                        result['bids_price'][result['bids'].index(dic['bid'])] += \
+                    if bid and dic['bid_size'] != old_mmid_data['bid_size']:
+                        result['bids_price'][0] += \
                             dic['bid_size'] - old_mmid_data['bid_size']
                     else:
-                        if bid:
+                        if bid and dic['ask_size'] != old_mmid_data['ask_size']:
                             result['asks_price'][result['asks'].index(dic['ask'])] += \
                                 dic['ask_size'] - old_mmid_data['ask_size']
-
                 else:
 
                     lv2 = {
@@ -958,7 +958,7 @@ class LV2Listener(MyQuoteListener):
         #         self.summary_tick_id = summary[0][64]
         self.watches.add(summary['symbol'])
 
-        if verbose or 1:
+        if verbose:
             # print("%s: Data Summary\r" % self._name)
             # print('\r', summary)
             # for i, data in enumerate(summary[0]):
@@ -991,7 +991,7 @@ class LV2Listener(MyQuoteListener):
 
         # self.update_mongo.update_quote(update, self._name)
 
-        if verbose or 1:
+        if verbose:
             print("%s: LV2 Data Update" % self._name)
             print(update)
 
