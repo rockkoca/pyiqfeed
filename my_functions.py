@@ -390,8 +390,8 @@ class UpdateMongo(object):
             if update_meteor:
                 # TODO create a best data structure for the web
                 result = self.cache['lv2_result'].get(symbol, {})
-                bids = result['bids']
-                asks = result['asks']
+                bids = result.get('bids', False)
+                asks = result.get('asks', False)
                 if result and old_mmid_data and ((bid and bids and dic['bid'] == bids[0] == old_mmid_data['bid'])
                                                  or (ask and asks and dic['ask'] == asks[0] == old_mmid_data['bid'])):
 
