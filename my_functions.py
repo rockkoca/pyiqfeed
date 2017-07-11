@@ -389,7 +389,7 @@ class UpdateMongo(object):
 
             if update_meteor:
                 # TODO create a best data structure for the web
-                result = self.cache['lv2_result'].get(symbol, {})
+                # result = self.cache['lv2_result'].get(symbol, {})
                 # bids = result.get('bids', False)
                 # asks = result.get('asks', False)
                 # if result and old_mmid_data and ((bid and bids and dic['bid'] == bids[0] == old_mmid_data['bid'])
@@ -437,7 +437,7 @@ class UpdateMongo(object):
                     'asks_total': sum(lv2['asks'].values())
                 }
 
-                self.cache['lv2_result'][symbol] = result
+                # self.cache['lv2_result'][symbol] = result
                 # print(result)
                 result = col.update_one(
                     {'symbol': symbol},
