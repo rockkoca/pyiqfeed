@@ -3739,7 +3739,7 @@ class Lv2Conn(QuoteConn):
 
     def _create_update(self, fields: Sequence[str]) -> np.array:
         """Create an update message."""
-        print(fields)
+        # print(fields)
         update = {}
         for field_num, field in enumerate(fields[1:]):
             if field_num >= self._num_update_fields and not field:
