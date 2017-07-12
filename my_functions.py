@@ -377,10 +377,10 @@ class UpdateMongo(object):
                     old_dic = new_dic.get(mmid)
                     old_mmid_data = old_dic.copy()
                     for key in keys:
-                        if (ask and key.startswith('ask')) or (bid and key.startswith('bid')):
-                            new_dic[mmid][key] = dic[key]
-                        else:
-                            new_dic[mmid][key] = old_dic.get(key, dic[key])
+                        # if (ask and key.startswith('ask')) or (bid and key.startswith('bid')):
+                        new_dic[mmid][key] = dic[key]
+                        # else:
+                        #     new_dic[mmid][key] = old_dic.get(key, dic[key])
             #
             # for k, v in new_dic.items():
             #     print(type(v))
