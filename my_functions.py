@@ -370,11 +370,11 @@ class UpdateMongo(object):
                 }
             else:
                 new_dic = old
-
-                if mmid not in new_dic:
-                    new_dic[mmid] = dic
-                else:
-                    new_dic = dic
+                new_dic[mmid] = dic
+                # if mmid not in new_dic:
+                #     new_dic[mmid] = dic
+                # else:
+                #     new_dic[mmid] = dic
                     # old_dic = new_dic.get(mmid)
                     # old_mmid_data = old_dic.copy()
                     # for key in keys:
