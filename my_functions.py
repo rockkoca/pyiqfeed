@@ -447,6 +447,11 @@ class UpdateMongo(object):
 
                 # TODO trigger quick sell, cancel order
                 # threading.Thread
+                if verbose:
+                    end = dt.datetime.now()
+                    used = end - start
+                    us = used.microseconds
+                    print(f'time used before mongo {us / 1000} ms or {us / 1000 / 1000} secs')
 
                 result = col.update_one(
                     {'symbol': symbol},
