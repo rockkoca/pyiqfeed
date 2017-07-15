@@ -11,4 +11,4 @@ trader.get_quote('AMD')
 
 end = dt.now()
 
-print(f'time used {(end - start).microseconds} microseconds')
+print(f'time used {(end - start).microseconds} microseconds or {(end - start).seconds} secs')
