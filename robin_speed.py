@@ -1,13 +1,15 @@
 from robinhood.Robinhood import *
 from robinhood.credentials import *
 from datetime import datetime as dt
+import requests
 
 trader = Robinhood()
 trader.login(username=Credential.get_username(), password=Credential.get_password())
 
 start = dt.now()
 
-trader.get_quote('AMD')
+# trader.get_quote('AMD')
+requests.get('https://api.robinhood.com/quotes/?symbols=GPRO,DRYS,AMD')
 
 end = dt.now()
 
