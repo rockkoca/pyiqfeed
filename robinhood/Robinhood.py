@@ -135,10 +135,10 @@ class Robinhood(object):
             res.raise_for_status()
             data = res.json()
         except requests.exceptions.HTTPError:
-            raise RH_exception.LoginFailed()
+            raise LoginFailed()
 
         if 'mfa_required' in data.keys():  # pragma: no cover
-            raise RH_exception.TwoFactorRequired()  # requires a second call to enable 2FA
+            raise TwoFactorRequired()  # requires a second call to enable 2FA
 
         if 'token' in data.keys():
             self.auth_token = data['token']

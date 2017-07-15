@@ -92,16 +92,18 @@ class UpdateMongo(object):
         'date': {}
     }
 
-    def __init__(self):
-        self.cache = {
-            'bars': {},
-            'update_mongo_time': {},
-            'trend': {},
-            'date': {},
-            'lv2': {},
-            'lv2_result': {},
+    cache = {
+        'bars': {},
+        'update_mongo_time': {},
+        'trend': {},
+        'date': {},
+        'lv2': {},
+        'lv2_result': {},
 
-        }
+    }
+
+    def __init__(self):
+
         if sys.platform == 'darwin':
             self.client = MongoClient("mongodb://localhost:3001")
             self.db = self.client.meteor
@@ -375,13 +377,13 @@ class UpdateMongo(object):
                 #     new_dic[mmid] = dic
                 # else:
                 #     new_dic[mmid] = dic
-                    # old_dic = new_dic.get(mmid)
-                    # old_mmid_data = old_dic.copy()
-                    # for key in keys:
-                    #     # if (ask and key.startswith('ask')) or (bid and key.startswith('bid')):
-                    #     new_dic[mmid][key] = dic[key]
-                        # else:
-                        #     new_dic[mmid][key] = old_dic.get(key, dic[key])
+                # old_dic = new_dic.get(mmid)
+                # old_mmid_data = old_dic.copy()
+                # for key in keys:
+                #     # if (ask and key.startswith('ask')) or (bid and key.startswith('bid')):
+                #     new_dic[mmid][key] = dic[key]
+                # else:
+                #     new_dic[mmid][key] = old_dic.get(key, dic[key])
             #
             # for k, v in new_dic.items():
             #     print(type(v))
@@ -440,6 +442,10 @@ class UpdateMongo(object):
 
                 # self.cache['lv2_result'][symbol] = result
                 # print(result)
+
+                # TODO trigger quick sell, cancel order
+                # threading.Thread
+
                 result = col.update_one(
                     {'symbol': symbol},
                     {
@@ -650,7 +656,9 @@ class UpdateMongo(object):
 
             }
         }
-        stock = trader.instrument(symbol)
+        stock = ins.find_one({{'symbol': symbol}})
+        if not stock:
+            stock = trader.instrument(symbol)
 
         def log(info):
             logs.insert({
