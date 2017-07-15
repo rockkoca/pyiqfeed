@@ -30,7 +30,7 @@ from scipy import stats as st
 import robinhood.Robinhood as RB
 from robinhood.credentials import *
 
-verbose = 0
+verbose = 1
 look_back_bars = 720
 
 trader = RB.Robinhood()
