@@ -348,6 +348,8 @@ class UpdateMongo(object):
         return data
 
     def update_lv2(self, data: dict, name: str) -> None:
+        if verbose:
+            start = dt.datetime.now()
         col = self.db.lv2
         dic = self._process_lv2(data)
         # print(dic)
@@ -456,6 +458,11 @@ class UpdateMongo(object):
                 # print(dir(result))
                 # print(result.matched_count, result.row_result)
                 pass
+            if verbose:
+                end = dt.datetime.now()
+                used = end - start
+                us = used.microseconds
+                print(f'time used {us / 1000} ms or {us / 1000 / 1000} secs')
 
     @staticmethod
     def process_binary_symbol(s) -> str:
