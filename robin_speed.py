@@ -10,6 +10,7 @@ start = dt.now()
 
 # trader.get_quote('AMD')
 # requests.get('https://api.robinhood.com/quotes/?symbols=GPRO,DRYS,AMD')
+l = [x for x in range(100)]
 
 end = dt.now()
 
