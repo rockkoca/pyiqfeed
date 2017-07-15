@@ -10,8 +10,8 @@ start = dt.now()
 
 # trader.get_quote('AMD')
 # requests.get('https://api.robinhood.com/quotes/?symbols=GPRO,DRYS,AMD')
-l = [x for x in range(1000)]
-x = [l for i in range(1000)]
+l = [x for x in range(200)]
+x = [l for i in range(200)]
 for i, l in enumerate(x):
     x[i] = sorted(l)
 
