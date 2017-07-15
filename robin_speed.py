@@ -1,14 +1,14 @@
 from robinhood.Robinhood import *
 from robinhood.credentials import *
-import time
+from datetime import datetime as dt
 
 trader = Robinhood()
 trader.login(username=Credential.get_username(), password=Credential.get_password())
 
-start = time.time()
+start = dt.now()
 
 trader.get_quote('AMD')
 
-end = time.time()
+end = dt.now()
 
-print(f'time used {end - start} seconds')
+print(f'time used {(end - start).microseconds} microseconds')
