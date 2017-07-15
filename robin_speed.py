@@ -9,7 +9,7 @@ trader.login(username=Credential.get_username(), password=Credential.get_passwor
 start = dt.now()
 
 # trader.get_quote('AMD')
-requests.get('https://api.robinhood.com/quotes/?symbols=GPRO,DRYS,AMD')
+# requests.get('https://api.robinhood.com/quotes/?symbols=GPRO,DRYS,AMD')
 
 end = dt.now()
 
