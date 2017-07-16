@@ -43,6 +43,7 @@ start = dt.datetime.now()
 # print(trader.url('https://api.robinhood.com/accounts/5SA59772/positions/940fc3f5-1db5-4fed-b452-f3a2e4562b5f/'))
 for j in range(100):
     test = db.instruments.find_one({'auto.lv2_quick_sell': True})
+    orders = db.orders.find({'symbol': 'AMD', 'cancel': {'$ne': None}})
 
 # lv2 = {
 #     'bids': {},
