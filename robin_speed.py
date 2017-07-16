@@ -31,9 +31,9 @@ def search_mongo(ty: str):
     if ty == 'ins':
         return db.instruments.find_one({'auto.lv2_quick_sell': True})
     if ty == 'orders':
-        return db.orders.find({'symbol': 'AMD', 'cancel': {'$ne': None}})
+        return db.orders.find({'instrument': amd['url'], 'cancel': {'$ne': None}})
     if ty == 'pos':
-        return db.nonzero_positions.find_one({'symbol': 'AMD'})
+        return db.nonzero_positions.find_one({'instrument': amd['url']})
         # return db.orders.find({'symbol': 'AMD', 'cancel': {'$ne': None}})
 
 
@@ -60,8 +60,8 @@ for j in range(100):
     #     for task in concurrent.futures.as_completed(tasks):
     #         task.result()
     results = [
-        # search_mongo('ins'),
-        # search_mongo('orders'),
+        search_mongo('ins'),
+        search_mongo('orders'),
         search_mongo('pos')
     ]
 # lv2 = {
@@ -113,4 +113,3 @@ print(f'time used {us / 1000} ms or {us / 1000 / 1000} secs')
 print(f'time used {us / 1000 / 100} ms or {us / 1000 / 1000 / 100} secs')
 for order in search_mongo('orders'):
     print(order)
-
