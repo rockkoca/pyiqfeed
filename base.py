@@ -71,7 +71,7 @@ if __name__ == "__main__":
 
     pool = {}
     #
-    bars = threading.Timer(5, get_indexes, [{}, 30, 1, True])
+    bars = threading.Timer(5, get_indexes)
 
     while 1:
         time.sleep(1)
