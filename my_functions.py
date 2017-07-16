@@ -103,6 +103,14 @@ class UpdateMongo(object):
 
     }
 
+    mongo_cache = {
+        'ins': {},
+        'ins_to_symbol': {},
+        'orders': {},
+        'pos': {}
+
+    }
+
     def __init__(self):
 
         if sys.platform == 'darwin':
@@ -136,6 +144,9 @@ class UpdateMongo(object):
         for result in col.find():
             symbols[result['symbol']] = result
         return symbols
+
+    def ins_to_symbol(self, ins: str) -> str:
+        return self.mongo_cache['ins_to_symbol'].get(ins, {}).get('symbol', '')
 
     @staticmethod
     def _process_regional_quote(data: np.array) -> dict:

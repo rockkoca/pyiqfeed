@@ -4,6 +4,41 @@ from my_functions import *
 import concurrent.futures
 import multiprocessing
 
+update_mongo = UpdateMongo()
+db = update_mongo.get_db()
+
+
+def search_mongo(ty: str):
+    if ty == 'ins':
+        return db.instruments.find()
+    if ty == 'orders':
+        return db.orders.find({'cancel': {'$ne': None}})
+    if ty == 'pos':
+        return db.nonzero_positions.find()
+        # return db.orders.find({'symbol': 'AMD', 'cancel': {'$ne': None}})
+
+
+def sync_mongo():
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        ins = executor.submit(search_mongo, ty='ins')
+        orders = executor.submit(search_mongo, ty='orders')
+        positions = executor.submit(search_mongo, ty='pos')
+        try:
+            ins = ins.result()
+            orders = orders.result()
+            positions = positions.result()
+        except Exception as exc:
+            print(f'exceptions when syncing mongo {exc}')
+        else:
+            for instrument in ins:
+                update_mongo.mongo_cache['ins'][instrument['symbol']] = instrument
+                update_mongo.mongo_cache['ins_to_symbol'][instrument['url']] = instrument
+            for order in orders:
+                update_mongo.mongo_cache['orders'][order['instrument']] = order
+            for pos in positions:
+                update_mongo.mongo_cache['pos'][pos['instrument']] = pos
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run pyiqfeed example code")
     parser.add_argument('-l', action="store_true", dest='level_1',
@@ -47,6 +82,7 @@ if __name__ == "__main__":
 
     # wait 10 till the service is started
     # threading.Timer(30, check_connection).start()
+    set_interval(sync_mongo, .15)
 
     pool = {}
     #

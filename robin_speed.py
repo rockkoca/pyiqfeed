@@ -10,6 +10,14 @@ db = update_mongo.get_db()
 
 amd = db.instruments.find_one({'symbol': 'AMD'})
 
+cache = {
+    'bot': {
+        'AMD': {
+            'auto.lv2_quick_sell': True
+        }
+    }
+}
+
 
 def random_lv2():
     choices = [10.11, 10, 11, 10, 11, 10.08, 10.12, 10, 12, 10, 12, 10.05, 10, 10.01, 10.02, 10.06, 10, 9, 8, 8.5]
@@ -27,14 +35,40 @@ def random_lv2():
 
 # trader = Robinhood()
 # trader.login(username=Credential.get_username(), password=Credential.get_password())
+
+update_mongo = UpdateMongo()
+db = update_mongo.get_db()
+
+
 def search_mongo(ty: str):
     if ty == 'ins':
-        return db.instruments.find_one({'auto.lv2_quick_sell': True})
+        return db.instruments.find()
     if ty == 'orders':
-        return db.orders.find({'instrument': amd['url'], 'cancel': {'$ne': None}})
+        return db.orders.find({'cancel': {'$ne': None}})
     if ty == 'pos':
-        return db.nonzero_positions.find_one({'instrument': amd['url']})
+        return db.nonzero_positions.find()
         # return db.orders.find({'symbol': 'AMD', 'cancel': {'$ne': None}})
+
+
+def sync_mongo():
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        ins = executor.submit(search_mongo, ty='ins')
+        orders = executor.submit(search_mongo, ty='orders')
+        positions = executor.submit(search_mongo, ty='pos')
+        try:
+            ins = ins.result()
+            orders = orders.result()
+            positions = positions.result()
+        except Exception as exc:
+            print(f'exceptions when syncing mongo {exc}')
+        else:
+            for instrument in ins:
+                update_mongo.mongo_cache['ins'][instrument['symbol']] = instrument
+                update_mongo.mongo_cache['ins_to_symbol'][instrument['url']] = instrument
+            for order in orders:
+                update_mongo.mongo_cache['orders'][order['instrument']] = order
+            for pos in positions:
+                update_mongo.mongo_cache['pos'][pos['instrument']] = pos
 
 
 start = dt.datetime.now()
@@ -52,18 +86,8 @@ start = dt.datetime.now()
 # test = db.instruments.find_one({'auto.lv2_quick_sell': True})
 # orders = db.orders.find({'symbol': 'AMD', 'cancel': {'$ne': None}})
 for j in range(1000):
-    # tasks = []
-    # with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-    #     tasks.append(executor.submit(search_mongo, ty='ins'))
-    #     tasks.append(executor.submit(search_mongo, ty='orders'))
-    #     # tasks.append(executor.submit(search_mongo, ty='pos'))
-    #     for task in concurrent.futures.as_completed(tasks):
-    #         task.result()
-    results = [
-        search_mongo('ins'),
-        search_mongo('orders'),
-        search_mongo('pos')
-    ]
+    sync_mongo()
+
 # lv2 = {
 #     'bids': {},
 #     'asks': {}
@@ -113,3 +137,4 @@ print(f'time used {us / 1000} ms or {us / 1000 / 1000} secs')
 print(f'time used {us / 1000 / 1000} ms or {us / 1000 / 1000 / 1000} secs')
 # for order in search_mongo('orders'):
 #     print(order)
+print(update_mongo.mongo_cache['orders'])
