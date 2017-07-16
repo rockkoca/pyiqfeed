@@ -27,9 +27,17 @@ def random_lv2():
 
 # trader = Robinhood()
 # trader.login(username=Credential.get_username(), password=Credential.get_password())
+def search_mongo(ty: str):
+    if ty == 'ins':
+        return db.instruments.find_one({'auto.lv2_quick_sell': True})
+    if ty == 'orders':
+        return db.orders.find({'symbol': 'AMD', 'cancel': {'$ne': None}})
+    if ty == 'pos':
+        return db.nonzero_positions.find_one({'symbol': 'AMD'})
+        # return db.orders.find({'symbol': 'AMD', 'cancel': {'$ne': None}})
+
 
 start = dt.datetime.now()
-
 # trader.get_quote('AMD')
 # requests.get('https://api.robinhood.com/quotes/?symbols=GPRO,DRYS,AMD')
 # l = [x for x in range(200)]
@@ -41,10 +49,21 @@ start = dt.datetime.now()
 # print(order)
 
 # print(trader.url('https://api.robinhood.com/accounts/5SA59772/positions/940fc3f5-1db5-4fed-b452-f3a2e4562b5f/'))
+# test = db.instruments.find_one({'auto.lv2_quick_sell': True})
+# orders = db.orders.find({'symbol': 'AMD', 'cancel': {'$ne': None}})
 for j in range(100):
-    test = db.instruments.find_one({'auto.lv2_quick_sell': True})
-    orders = db.orders.find({'symbol': 'AMD', 'cancel': {'$ne': None}})
-
+    # tasks = []
+    # with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    #     tasks.append(executor.submit(search_mongo, ty='ins'))
+    #     tasks.append(executor.submit(search_mongo, ty='orders'))
+    #     # tasks.append(executor.submit(search_mongo, ty='pos'))
+    #     for task in concurrent.futures.as_completed(tasks):
+    #         task.result()
+    results = [
+        # search_mongo('ins'),
+        # search_mongo('orders'),
+        search_mongo('pos')
+    ]
 # lv2 = {
 #     'bids': {},
 #     'asks': {}
@@ -92,3 +111,6 @@ used = end - start
 us = used.microseconds
 print(f'time used {us / 1000} ms or {us / 1000 / 1000} secs')
 print(f'time used {us / 1000 / 100} ms or {us / 1000 / 1000 / 100} secs')
+for order in search_mongo('orders'):
+    print(order)
+
