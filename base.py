@@ -60,5 +60,8 @@ if __name__ == "__main__":
     indexes = threading.Timer(5, get_indexes)
     indexes.start()
 
+    bars = threading.Timer(5, get_live_multi_interval_bars, [{}, 30, 1, True])
+    bars.start()
+
     while 1:
-        time.sleep(1)
+        time.sleep(5)

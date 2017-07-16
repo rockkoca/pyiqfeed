@@ -23,7 +23,7 @@ def random_lv2():
     }
 
 
-vals = [random_lv2() for i in range(200)]
+# vals = [random_lv2() for i in range(200)]
 
 # trader = Robinhood()
 # trader.login(username=Credential.get_username(), password=Credential.get_password())
@@ -41,47 +41,43 @@ start = dt.datetime.now()
 # print(order)
 
 # print(trader.url('https://api.robinhood.com/accounts/5SA59772/positions/940fc3f5-1db5-4fed-b452-f3a2e4562b5f/'))
+for j in range(100):
+    db.instruments.find_one({'auto.lv2_quick_sell': True})
 
-
-
-
-
-
-
-lv2 = {
-    'bids': {},
-    'asks': {}
-}  # symbol', 'MMID', 'bid', 'ask', 'bid_size', 'ask_size', 'bidinfovalid', 'askinfovalid'
-for val in vals:
-
-    if val['bidinfovalid']:
-        bid = val['bid']
-        lv2['bids'][bid] = lv2['bids'].get(bid, 0) + val['bid_size']
-
-    if val['askinfovalid']:
-        ask = val['ask']
-        lv2['asks'][ask] = lv2['asks'].get(ask, 0) + val['ask_size']
-
-lv2['symbol'] = 'AMD'
-
-lv2['bids_order'] = sorted(list(lv2['bids'].keys()), reverse=True)
-lv2['asks_order'] = sorted(list(lv2['asks'].keys()))
+# lv2 = {
+#     'bids': {},
+#     'asks': {}
+# }  # symbol', 'MMID', 'bid', 'ask', 'bid_size', 'ask_size', 'bidinfovalid', 'askinfovalid'
+# for val in vals:
 #
-# lv2['bids_total'] = sum(lv2['bids'].values())
-# lv2['asks_total'] = sum(lv2['asks'].values())
-# print(lv2)
-result = {
-    'symbol': 'AMD',
-    'bids': lv2['bids_order'],
-    'bids_price': [lv2['bids'][price] for price in lv2['bids_order']],
-    'asks': lv2['asks_order'],
-    'asks_price': [lv2['asks'][price] for price in lv2['asks_order']],
-    'bids_total': sum(lv2['bids'].values()),
-    'asks_total': sum(lv2['asks'].values())
-}
+#     if val['bidinfovalid']:
+#         bid = val['bid']
+#         lv2['bids'][bid] = lv2['bids'].get(bid, 0) + val['bid_size']
+#
+#     if val['askinfovalid']:
+#         ask = val['ask']
+#         lv2['asks'][ask] = lv2['asks'].get(ask, 0) + val['ask_size']
+#
+# lv2['symbol'] = 'AMD'
+#
+# lv2['bids_order'] = sorted(list(lv2['bids'].keys()), reverse=True)
+# lv2['asks_order'] = sorted(list(lv2['asks'].keys()))
+# #
+# # lv2['bids_total'] = sum(lv2['bids'].values())
+# # lv2['asks_total'] = sum(lv2['asks'].values())
+# # print(lv2)
+# result = {
+#     'symbol': 'AMD',
+#     'bids': lv2['bids_order'],
+#     'bids_price': [lv2['bids'][price] for price in lv2['bids_order']],
+#     'asks': lv2['asks_order'],
+#     'asks_price': [lv2['asks'][price] for price in lv2['asks_order']],
+#     'bids_total': sum(lv2['bids'].values()),
+#     'asks_total': sum(lv2['asks'].values())
+# }
 
 end = dt.datetime.now()
-print(result)
+# print(result)
 # print(trader.url(order['position']))
 
 # time.sleep(5)
@@ -94,3 +90,4 @@ print(result)
 used = end - start
 us = used.microseconds
 print(f'time used {us / 1000} ms or {us / 1000 / 1000} secs')
+print(f'time used {us / 1000 / 100} ms or {us / 1000 / 1000 / 100} secs')

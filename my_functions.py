@@ -296,6 +296,7 @@ class UpdateMongo(object):
         dic = self.process_quote(data)
         # print(dic)
         symbol = IndexWatcher.symbol_map.get(dic['symbol'])
+        dic['symbol'] = symbol
         # print(symbol)
         update_meteor = True
 
@@ -504,9 +505,10 @@ class UpdateMongo(object):
                     ask_size = result['asks_price']
 
                     if len(bid_size) > 0 and len(ask_size) > 0 and bid_size[0] / ask_size[0] < .7:
-                        task = executor.submit(self.call_server_api, path='v2-quick-sell', data={
-                            'symbol': symbol
-                        })
+                        # task = executor.submit(self.call_server_api, path='v2-quick-sell', data={
+                        #     'symbol': symbol
+                        # })
+                        pass
 
                     result = col.update_one(
                         {'symbol': symbol},
