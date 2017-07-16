@@ -41,5 +41,7 @@ if __name__ == '__main__':
         pass
     else:  # locate the screen
         # print(type(screens), screens)
-        print("screen -r %s" % re.search(r'[0-9]+\.stock', screens).group()[:-6])
-        print("screen -r %s" % re.search(r'[0-9]+\.index', screens).group()[:-6])
+        print('base index')
+        print(" screen -r %s" % re.search(r'[0-9]+\.index', screens).group()[:-6])
+        print('stock')
+        print(" screen -r %s" % re.search(r'[0-9]+\.stock', screens).group()[:-6])
