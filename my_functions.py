@@ -11,6 +11,7 @@ for more details.
 import sys
 import argparse
 import pyiqfeed as iq
+import requests
 import datetime
 import numpy as np
 from typing import Sequence
@@ -114,6 +115,9 @@ class UpdateMongo(object):
 
     def get_client(self):
         return self.client
+
+    def get_db(self):
+        return self.db
 
     @staticmethod
     def default_bar_data(symbol, name):
@@ -287,6 +291,44 @@ class UpdateMongo(object):
     def tick_time_timestamp(yymmdd: str, us: int) -> str:
         return str(int(np.floor(UpdateMongo.tick_time(yymmdd, us).timestamp())))
 
+    def update_index(self, data: np.array, name: str) -> None:
+        col = self.db.index
+        dic = self.process_quote(data)
+        # print(dic)
+        symbol = IndexWatcher.symbol_map.get(dic['symbol'])
+        # print(symbol)
+        update_meteor = True
+
+        if dic:
+            # print(dic)
+            keys = list(dic.keys())
+            new_dic = {}
+            old = col.find_one({'symbol': symbol})
+            # print(old)
+            if not old:
+                old = {}
+
+            for key in keys:
+                if dic[key] != 'nan' and dic[key]:
+                    new_dic[key] = dic[key]
+                else:
+                    if key in old:
+                        new_dic[key] = old[key]
+
+            if new_dic['tick'] == old.get('tick', 0):
+                return
+
+            if update_meteor:
+                result = col.update_one(
+                    {'symbol': new_dic['symbol']},
+                    {
+                        "$set": new_dic,
+                    },
+                    True
+                )
+                # print(dir(result))
+                # print(result.matched_count, result.row_result)
+
     def update_quote(self, data: np.array, name: str) -> None:
         col = self.db.quotes
         dic = self.process_quote(data)
@@ -453,13 +495,30 @@ class UpdateMongo(object):
                     us = used.microseconds
                     print(f'time used before mongo {us / 1000} ms or {us / 1000 / 1000} secs')
 
-                result = col.update_one(
-                    {'symbol': symbol},
-                    {
-                        "$set": result,
-                    },
-                    True
-                )
+                with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                    task = ''
+
+                    bid_size = result['bids_price']
+                    ask_size = result['asks_price']
+                    if len(bid_size) > 0 and len(ask_size) > 0 and bid_size[0] / ask_size[0] < .7:
+                        task = executor.submit(self.call_server_api, path='v2-quick-sell', data={
+                            'symbol': symbol
+                        })
+
+                    result = col.update_one(
+                        {'symbol': symbol},
+                        {
+                            "$set": result,
+                        },
+                        True
+                    )
+
+                    try:
+                        data = task.result()
+                    except Exception as exc:
+                        print('%r generated an exception: %s' % ('v2-quick-sell' + symbol, exc))
+                    else:
+                        print('%r submitted, %s' % ('v2-quick-sell' + symbol, data))
                 # print(dir(result))
                 # print(result.matched_count, result.row_result)
                 pass
@@ -467,7 +526,13 @@ class UpdateMongo(object):
                 end = dt.datetime.now()
                 used = end - start
                 us = used.microseconds
-                print(f'time used {us / 1000} ms or {us / 1000 / 1000} secs')
+                print(f'time used after mongo update {us / 1000} ms or {us / 1000 / 1000} secs')
+
+    @staticmethod
+    def call_server_api(path: str, data={}):
+        url = 'http://localhost:3000/f991eb733c339f4a5f9087354e9c683cd0b9969f/'
+        if path == 'lv2-quick-sell':
+            return requests.get(f'{url}/{path}/{data["symbol"]}').content
 
     @staticmethod
     def process_binary_symbol(s) -> str:
@@ -963,6 +1028,60 @@ class MyQuoteListener(iq.SilentQuoteListener):
     def process_ip_addresses_used(self, ip: str) -> None:
         if verbose:
             print("%s: IP Addresses Used: %s" % (self._name, ip))
+
+
+class IndexWatcher(MyQuoteListener):
+    symbol_map = {
+        'SPX.XO': '^GSPC',
+        'VIX.XO': '^VIX',
+    }
+
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.update_mongo = UpdateMongo()
+        self.summary_tick_id = {}
+        self.watches = set()
+
+    def process_summary(self, summary: np.array) -> None:
+        # if is_server():
+        #     if len(summary) > 0 and len(summary[0]) > 64 and summary[0][64] != self.summary_tick_id:
+        self.update_mongo.update_index(summary, self._name)
+        #         self.summary_tick_id = summary[0][64]
+
+        if verbose:
+            # print("%s: Data Summary\r" % self._name)
+            # print('\r', summary)
+            # for i, data in enumerate(summary[0]):
+            #     print(i, data)
+
+            summary = summary[0]
+            if summary[64] != self.summary_tick_id:
+                print(
+                    "symbol:{}, ask{}, size:{}, bid:{} size:{} close:{}, last: "
+                    "{},high:{}, ?: {} tick_vol:{}, vol:{}, tick: {}".format(
+                        summary[0],
+                        summary[1],
+                        summary[4],
+                        summary[8],
+                        summary[11],
+                        summary[15],
+                        summary[22],
+                        summary[31],
+                        summary[32],
+                        summary[35],
+                        summary[65],
+                        summary[64]
+                    ))
+                self.summary_tick_id = summary[64]
+
+            pass
+
+    def process_update(self, update: np.array) -> None:
+        self.update_mongo.update_index(update, self._name)
+
+        if verbose:
+            print("%s: Data Update" % self._name)
+            print(update)
 
 
 history_cache = {}

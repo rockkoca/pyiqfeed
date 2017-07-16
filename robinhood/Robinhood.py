@@ -654,8 +654,14 @@ class Robinhood(object):
         """
         return self.session.get(self.endpoints['dividends']).json()
 
-    def url(self, url) -> dict:
+    def url(self, url) -> str:
+        return self.session.get(url=url).content
+
+    def url_json(self, url) -> dict:
         return self.session.get(url=url).json()
+
+    def url_post(self, url) -> dict:
+        return self.session.post(url=url).json()
 
     def sp500_up(self) -> dict:
         return self.session.get(self.endpoints['sp500_up']).json()
@@ -826,6 +832,16 @@ class Robinhood(object):
         transaction = Transaction.SELL
         return self.place_order(instrument=instrument, quantity=quantity, price=price, transaction=transaction)
 
+    def cancel_order(self,
+                     order: dict
+                     ):
+        if 'cancel' in order:
+            return self.session.post(order['cancel']).json()
+        else:
+            return {
+                'detail': "Order already cancelled." if order[
+                                                            'state'] == "cancelled"  else "Order cannot be cancelled."
+            }
 
 
 """exceptions: custom exceptions for library"""
