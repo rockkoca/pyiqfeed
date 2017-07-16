@@ -51,7 +51,7 @@ start = dt.datetime.now()
 # print(trader.url('https://api.robinhood.com/accounts/5SA59772/positions/940fc3f5-1db5-4fed-b452-f3a2e4562b5f/'))
 # test = db.instruments.find_one({'auto.lv2_quick_sell': True})
 # orders = db.orders.find({'symbol': 'AMD', 'cancel': {'$ne': None}})
-for j in range(100):
+for j in range(1000):
     # tasks = []
     # with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
     #     tasks.append(executor.submit(search_mongo, ty='ins'))
@@ -110,6 +110,6 @@ end = dt.datetime.now()
 used = end - start
 us = used.microseconds
 print(f'time used {us / 1000} ms or {us / 1000 / 1000} secs')
-print(f'time used {us / 1000 / 100} ms or {us / 1000 / 1000 / 100} secs')
-for order in search_mongo('orders'):
-    print(order)
+print(f'time used {us / 1000 / 1000} ms or {us / 1000 / 1000 / 1000} secs')
+# for order in search_mongo('orders'):
+#     print(order)
