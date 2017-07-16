@@ -393,7 +393,8 @@ class UpdateMongo(object):
         if verbose:
             start = dt.datetime.now()
         col = self.db.lv2
-        dic = self._process_lv2(data)
+        # dic = self._process_lv2(data)
+        dic = data
         # print(dic)
         symbol = dic['symbol']
         # print(symbol)
@@ -456,6 +457,7 @@ class UpdateMongo(object):
                     'asks': {}
                 }
                 # symbol', 'MMID', 'bid', 'ask', 'bid_size', 'ask_size', 'bidinfovalid', 'askinfovalid'
+                print(len(new_dic.keys()))
                 for val in new_dic.values():
 
                     if val['bidinfovalid']:
@@ -497,9 +499,10 @@ class UpdateMongo(object):
 
                 with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
                     task = ''
-
+                    start_task = dt.datetime.now()
                     bid_size = result['bids_price']
                     ask_size = result['asks_price']
+
                     if len(bid_size) > 0 and len(ask_size) > 0 and bid_size[0] / ask_size[0] < .7:
                         task = executor.submit(self.call_server_api, path='v2-quick-sell', data={
                             'symbol': symbol
@@ -518,7 +521,8 @@ class UpdateMongo(object):
                     except Exception as exc:
                         print('%r generated an exception: %s' % ('v2-quick-sell' + symbol, exc))
                     else:
-                        print('%r submitted, %s' % ('v2-quick-sell' + symbol, data))
+                        print('%r submitted, %s, used %s ms' % ('v2-quick-sell' + symbol, data,
+                                                                (dt.datetime.now() - start_task).microseconds / 1000))
                 # print(dir(result))
                 # print(result.matched_count, result.row_result)
                 pass

@@ -3655,10 +3655,14 @@ class Lv2Conn(QuoteConn):
                      # 'Ask Size': ('Ask Size', 'u8', fr.read_uint64),
                      'Bid Size': ('Bid Size', 'u8', lambda x: int(x)),
                      'Ask Size': ('Ask Size', 'u8', lambda x: int(x)),
-                     'Bid Time': ('Bid Time', 'u8', fr.read_hhmmssus),
+                     # 'Bid Time': ('Bid Time', 'u8', fr.read_hhmmssus),
+                     'Bid Time': ('Bid Time', 'u8', lambda x: x),
+                     # 'Bid Date':
+                     #     ('Bid Date', 'M8[D]', fr.read_ccyymmdd),
                      'Bid Date':
-                         ('Bid Date', 'M8[D]', fr.read_ccyymmdd),
-                     'Ask Time': ('Ask Time', 'u8', fr.read_hhmmssus),
+                         ('Bid Date', 'M8[D]', lambda x: x),
+                     # 'Ask Time': ('Ask Time', 'u8', fr.read_hhmmssus),
+                     'Ask Time': ('Ask Time', 'u8', lambda x: x),
                      'Condition Code': ('Condition', 'b1', fr.read_condition_code),
                      'BidInfoValid':
                          ('BidInfoValid', 'b1', fr.read_bool),

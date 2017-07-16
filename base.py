@@ -18,6 +18,7 @@ def get_indexes():
         all_fields = sorted(list(iq.QuoteConn.quote_msg_map.keys()))
         quote_conn.select_update_fieldnames(all_fields)
         for ticker in IndexWatcher.symbol_map.keys():
+            print(f'watch {ticker}')
             quote_conn.watch(ticker)
             time.sleep(1)
 
@@ -52,26 +53,12 @@ if __name__ == "__main__":
     results = parser.parse_args()
 
     launch_service()
-    # print(results)
-    # get_level_1_quotes_and_trades(ticker="AMD", seconds=1)
-    # get_tickdata(ticker="AMD", max_ticks=10000, num_days=4)
-    # get_historical_bar_data(ticker="AMD",
-    #                             bar_len=60,
-    #                             bar_unit='s',
-    #                             num_bars=100)
-    # get_daily_data(ticker="AMD", num_days=10)
-    # get_live_interval_bars(ticker="AMD", bar_len=600, seconds=30)
-
-    # We can use a with statement to ensure threads are cleaned up promptly
-    # TODO Fix MongoClient opened before fork. Create MongoClient
-    # set_interval(check_connection, 5)
 
     # wait 10 till the service is started
     threading.Timer(30, check_connection).start()
 
-    pool = {}
-    #
-    bars = threading.Timer(5, get_indexes)
+    indexes = threading.Timer(5, get_indexes)
+    indexes.start()
 
     while 1:
         time.sleep(1)
