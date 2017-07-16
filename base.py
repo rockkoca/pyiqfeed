@@ -71,14 +71,7 @@ if __name__ == "__main__":
 
     pool = {}
     #
-    bars = threading.Timer(5, get_live_multi_interval_bars, [{}, 30, 1, True])
-    bars.start()
-
-    lv1 = threading.Timer(5, get_indexes, [{}, 1, True])
-    lv1.start()
-
-    lv2 = threading.Timer(5, get_level_2_multi_quotes_and_trades, [{}, 1, True])
-    lv2.start()
+    bars = threading.Timer(5, get_indexes, [{}, 30, 1, True])
 
     while 1:
         time.sleep(1)
