@@ -1,13 +1,14 @@
 from my_functions import *
+
 #
-# update_mongo = UpdateMongo()
+update_mongo = UpdateMongo()
 # # print(update_mongo.get_symbols())
-# db = update_mongo.get_client().meteor
+db = update_mongo.get_client().meteor
 # print(db)
-# col = db.quotes
+col = db.instruments
 # print(col)
 #
-# amd = col.find_one({'symbol': 'AMD'})
+amd = col.find_one({'symbol': 'AMD'})
 #
 # for k, v in amd.items():
 #     print(k, v)
@@ -24,9 +25,7 @@ import time
 import requests
 from datetime import datetime as dt
 
-update_mongo = UpdateMongo()
 start = dt.now()
-
 
 # def test(second=3):
 #     time.sleep(3)
@@ -51,7 +50,8 @@ if __name__ == '__main__':
     #         # print('%r page is %d bytes' % ('', len(data)))
     # time.sleep(.004)
     # update_mongo.lv2_quick_sell('AMD')
-    trader.quote_data('AMD')
+    # trader.quote_data('AMD')
+    update_mongo.place_market_sell_order(amd, 10, 10.00)
     end = dt.now()
 
     used = end - start
