@@ -698,8 +698,8 @@ class UpdateMongo(object):
     @staticmethod
     def pt_time_used(start: dt.datetime, pt='') -> None:
         us = (dt.datetime.now() - start).microseconds
-        if pt != '':
-            return f'time used {us / 1000} ms or {us / 1000 / 1000} secs'
+        if pt == '':
+            return f' {us / 1000} ms or {us / 1000 / 1000} secs'
         else:
             print(f'{pt}: time used {us / 1000} ms or {us / 1000 / 1000} secs')
 
