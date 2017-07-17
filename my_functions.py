@@ -725,8 +725,7 @@ class UpdateMongo(object):
         try:
             return trader.url_post(order['cancel'])
         except Exception as e:
-            print(e)
-            return {'detail': e}
+            raise e
 
     @staticmethod
     def get_position(pos: dict):
