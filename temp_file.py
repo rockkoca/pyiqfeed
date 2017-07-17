@@ -33,10 +33,10 @@ start = dt.now()
 #     print(f'I slept {second} seconds')
 #     return second
 
-
-def test_request():
-    return requests.get('http://localhost:3000/f991eb733c339f4a5f9087354e9c683cd0b9969f/lv2-quick-sell/AMD').content
-
+#
+# def test_request():
+#     return requests.get('http://localhost:3000/f991eb733c339f4a5f9087354e9c683cd0b9969f/lv2-quick-sell/AMD').content
+#
 
 if __name__ == '__main__':
     # with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
@@ -50,7 +50,8 @@ if __name__ == '__main__':
     #     else:
     #         # print('%r page is %d bytes' % ('', len(data)))
     # time.sleep(.004)
-    update_mongo.lv2_quick_sell('AMD')
+    # update_mongo.lv2_quick_sell('AMD')
+    trader.quote_data('AMD')
     end = dt.now()
 
     used = end - start
