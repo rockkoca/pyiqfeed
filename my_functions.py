@@ -662,27 +662,39 @@ class UpdateMongo(object):
                 print(e)
             else:
                 pos['quantity'] = int(float(pos['quantity']))
+
                 if pos['quantity'] > 0:
                     # 如果还有 position, 清理掉, 因为上一步的市价单的 qty 可能不正确
-                    result = self.place_market_sell_order(ins=ins, qty=pos['quantity'],
-                                                          avg_price=float(pos['average_buy_price']))
-                    self.db.orders.insert_one(result)
-                    if verbose:
-                        print(f"market selling final {pos['quantity']} {result}")
+                    try:
+                        result = self.place_market_sell_order(ins=ins, qty=pos['quantity'],
+                                                              avg_price=float(pos['average_buy_price']))
+                        self.db.orders.insert_one(result)
+                    except Exception as e:
+                        print(f'market selling final exception {e}')
+                    else:
+                        if verbose:
+                            print(f"market selling final {pos['quantity']} {result}")
             if verbose:
                 print(f'time used after market selling final: {self.pt_time_used(now)}')
 
             try:
-                for_sell = selling_orders['for_sell'].result()
                 for_buy = selling_orders['for_buy'].result()
             except Exception as e:
-                print(f'exception in getting data for for_sell and for_buy {e}')
+                print(f'exception in getting data for for_buy {e}')
             else:
-                self.db.orders.insert_one(for_sell)
                 self.db.orders.insert_one(for_buy)
                 if verbose:
                     print(for_buy, type(for_buy))
-                    print(for_sell, type(for_sell))
+
+            try:
+                for_buy = selling_orders['for_buy'].result()
+            except Exception as e:
+                print(f'exception in getting data for for_sell {e}')
+            else:
+                self.db.orders.insert_one(for_buy)
+                if verbose:
+                    print(for_buy, type(for_buy))
+
             if verbose:
                 print(f'time used after lv2_quick_sell is done: {self.pt_time_used(now)}')
 
