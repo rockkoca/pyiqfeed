@@ -158,10 +158,13 @@ class UpdateMongo(object):
         return self.get_instrument().get('symbol', '')
 
     def get_instrument(self, symbol: str) -> dict:
-        if symbol in self.mongo_cache['ins']:
+        if symbol in self.mongo_cache['ins'] and (
+                    dt.datetime.now() - self.mongo_cache['ins'][symbol]['cache_time']).second > 0:
             return self.mongo_cache['ins'][symbol]
         else:
-            self.mongo_cache['ins'][symbol] = self.db.instruments.find_one({'symbol': symbol})
+            temp = self.db.instruments.find_one({'symbol': symbol})
+            temp['cache_time'] = dt.datetime.now()
+            self.mongo_cache['ins'][symbol] = temp
             if not self.mongo_cache['ins'][symbol]:
                 return {}
             self.mongo_cache['ins'][self.mongo_cache['ins'][symbol]['url']] = self.db.instruments.find_one(
@@ -583,6 +586,9 @@ class UpdateMongo(object):
         if not ins:  # this is not going to happen!!!!!, just in case
             ins = trader.instrument(symbol.upper())
             db.instruments.insert({'symbol': symbol}, ins, True)
+
+        if not ins.get('auto', {}).get('lv2_quick_sell', False):
+            return
         # get all the pending orders of this stock
         orders = db.orders.find({'instrument': ins['url'], 'cancel': {'$ne': None}})
         pos = db.nonzero_positions.find_one({'instrument': ins['url']})
