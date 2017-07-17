@@ -572,7 +572,7 @@ class UpdateMongo(object):
     def lv2_quick_sell(self, symbol: str):
         now = dt.datetime.now()
         key = f'lv2_quick_sell-{symbol}'
-        if key in self.cache and (now - self.cache[key]).microseconds / 1000 < 1000:
+        if key in self.cache and (now - self.cache[key]).seconds < 1:
             self.cache[key] = now
             return
         self.cache[key] = now
@@ -733,8 +733,7 @@ class UpdateMongo(object):
         try:
             return trader.url_json(pos['url'])
         except Exception as e:
-            print(e)
-            return {'detail': e}
+            raise e
 
     @staticmethod
     def call_server_api(path: str, data={}):
