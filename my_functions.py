@@ -590,7 +590,7 @@ class UpdateMongo(object):
         # get all the pending orders of this stock
         orders = db.orders.find({'instrument': ins['url'], 'cancel': {'$ne': None}})
         pos = db.nonzero_positions.find_one({'instrument': ins['url']})
-        print(f"{orders.count()}{pos['shares_held_for_buys']}{pos['quantity']}{pos['quantity']}")
+        #print(f"{orders.count()}{pos['shares_held_for_buys']}{pos['quantity']}{pos['quantity']}")
         if orders.count() == 0 and not (
                             float(pos['shares_held_for_buys']) > 0 or float(pos['quantity']) > 0 or float(
                     pos['quantity']) > 0):
