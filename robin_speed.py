@@ -39,7 +39,9 @@ def random_lv2():
 update_mongo = UpdateMongo()
 db = update_mongo.get_db()
 
+print(type(db.nonzero_positions.find_one({'_id': "vciE7HofYmyCTAFZX"})['quantity']))
 
+# print(trad)
 def search_mongo(ty: str):
     if ty == 'ins':
         return db.instruments.find()

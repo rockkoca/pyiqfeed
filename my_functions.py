@@ -30,6 +30,7 @@ from talib import MA_Type
 from scipy import stats as st
 
 import robinhood.Robinhood as RB
+from robinhood.Robinhood import *
 from robinhood.credentials import *
 
 verbose = 1
@@ -88,9 +89,9 @@ def is_server() -> bool:
     return sys.platform != 'darwin'
 
 
-class Math(math):
+class Math(object):
     @staticmethod
-    def to_2_decimal_floor(f: float):
+    def to_2_decimal_floor(f: float) -> str:
         return f'{math.floor(f*100)/100:.2f}'
 
 
@@ -568,6 +569,13 @@ class UpdateMongo(object):
                 print(f'time used after mongo update {us / 1000} ms or {us / 1000 / 1000} secs')
 
     def lv2_quick_sell(self, symbol: str):
+        now = dt.datetime.now()
+        key = f'lv2_quick_sell-{symbol}'
+        if key in self.cache and (now - self.cache[key]).microseconds / 1000 < 1000:
+            self.cache[key] = now
+            return
+        self.cache[key] = now
+
         db = self.get_db()
         # first find the instrument of this symbol
         ins = self.get_instrument(symbol)
@@ -578,9 +586,25 @@ class UpdateMongo(object):
         # get all the pending orders of this stock
         orders = db.orders.find({'instrument': ins['url'], 'cancel': {'$ne': None}})
         pos = db.nonzero_positions.find_one({'instrument': ins['url']})
+        if not orders and not (
+                            float(pos['shares_held_for_buys']) > 0 or float(pos['quantity']) > 0 or float(
+                    pos['shares_held_for_sells']) > 0):
+            return
         with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
 
-            canceled_orders = {executor.submit(self.cancel_order, order=order): order for order in orders}
+            # 首先不管三七二十一, 立即取消所有订单!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+            # TODO 如果有 pending buy, 立即发出一个市价单?? 如果已经成交, 这个赔钱概率99.99999%
+            # TODO if has pending buying order. cancel right away, and place a market sell at same time
+            # TODO 因为订单可能已经被执行, 所以同时发出一个市价单去清仓
+            # TODO 但是, 也有可能没有执行或者没有完全执行. 这是需要更新 position 并且再次下一个市价单
+
+            # TODO 如果有 pending limit selling order, 立即取消订单, 并在 8 ms 后发出一个市价单清仓, 不要等返回消息
+            # TODO 因为需要至少20ms才能知道结果. 这时也需要更新 position, 然后没有销售掉的情况下再次发送市价单清仓
+            # TODO This is the most important one!!!
+
+            canceled_orders = {}
+            selling_orders = {}
             order_types = {}
             for order in orders:
                 canceled_orders[executor.submit(self.cancel_order, order=order)] = order
@@ -591,25 +615,88 @@ class UpdateMongo(object):
                 order_types[order['side']] = [order] if order['side'] not in order_types else order_types[
                                                                                                   order['side']] + [
                                                                                                   order]
-                # TODO 如果有 pending limit selling order, 立即取消订单, 并在 8 ms 后发出一个市价单清仓, 不要等返回消息
-                # TODO 因为需要至少20ms才能知道结果. 这时也需要更新 position, 然后没有销售掉的情况下再次发送市价单清仓
-                # TODO This is the most important one!!!
+                if verbose:
+                    print(f'canceling {order}')
 
+            if 'buy' in order_types:
+                selling_orders['for_buy'] = executor.submit(self.place_market_sell_order, ins=ins,
+                                                            qty=int(float(pos['shares_held_for_buys'])))
+                if verbose:
+                    print(f"market selling for_buy {pos['shares_held_for_buys']}")
 
-                # TODO if no pending orders and has position, submit a market sell order right away
-                # TODO 但是任然需要更新 position 进行确认
-                ####################
+            # if 'sell' in order_types:
+            #     time.sleep(.007)  # 暂停7 ms, 等待订单成功取消, 否则发出订单也会被拒绝
+            #     selling_orders['for_sell'] = executor.submit(self.place_market_sell_order, ins=ins, qty=pos['quantity'],
+            #                                                  avg_price=pos['average_buy_price'])
+            # if 'sell' not in order_types:
+            #     time.sleep(.01)  # 暂定10ms, 然后更新 position
+            # else:
+            #     time.sleep(.003)  # 暂定10ms, 然后更新 position
+            # TODO 等待所有取消订单成功后更新 position
+            for future in concurrent.futures.as_completed(canceled_orders):
+                try:
+                    data = future.result()
+                except Exception as e:
+                    print(e)
+            # 先发出一个市价单清仓在更新 position, 因为更新 position 还需要大概20ms
+            if 'sell' in order_types or float(pos['quantity']) > 0:
+                selling_orders['for_sell'] = executor.submit(self.place_market_sell_order, ins=ins,
+                                                             qty=int(float(pos['quantity'])),
+                                                             avg_price=float(pos['average_buy_price']))
+                print(f"market selling for_sell {pos['quantity']}")
 
-                # TODO if has pending buying order. cancel right away, and place a market sell at same time
-                # TODO 因为订单可能已经被执行, 所以同时发出一个市价单去清仓
-                # TODO 但是, 也有可能没有执行或者没有完全执行. 这是需要更新 position 并且再次下一个市价单
+            try:
+                pos = self.get_position(pos)
+            except Exception as e:
+                print(e)
+            else:
+                pos['quantity'] = int(float(pos['quantity']))
+                if pos['quantity'] > 0:
+                    # 如果还有 position, 清理掉, 因为上一步的市价单的 qty 可能不正确
+                    result = self.place_market_sell_order(ins=ins, qty=pos['quantity'],
+                                                          avg_price=float(pos['average_buy_price']))
+                    self.db.orders.insert_one(result)
+                    if verbose:
+                        print(f"market selling final {pos['quantity']} {result}")
 
-    def place_market_sell_order(self, ins: dict):
+            try:
+                for_sell = selling_orders['for_sell'].result()
+                for_buy = selling_orders['for_buy'].result()
+            except Exception as e:
+                print(e)
+            else:
+                self.db.orders.insert_one(for_sell)
+                self.db.orders.insert_one(for_buy)
+                if verbose:
+                    print(for_buy)
+                    print(for_sell)
 
-        pass
+    @staticmethod
+    def place_market_sell_order(ins: dict, qty: int, avg_price: float) -> dict:
+        try:
+            order = trader.place_order(instrument=ins, quantity=qty, price=Math.to_2_decimal_floor(avg_price * .97),
+                                       transaction=Transaction.SELL)
+        except Exception as e:
+            print(e)
+            return {'detail': e}
+        else:
+            return order
 
-    def cancel_order(self, order: dict):
-        pass
+    @staticmethod
+    def cancel_order(order: dict):
+        try:
+            return trader.url_post(order['cancel'])
+        except Exception as e:
+            print(e)
+            return {'detail': e}
+
+    @staticmethod
+    def get_position(pos: dict):
+        try:
+            return trader.url_json(pos['url'])
+        except Exception as e:
+            print(e)
+            return {'detail': e}
 
     @staticmethod
     def call_server_api(path: str, data={}):

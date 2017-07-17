@@ -1,4 +1,4 @@
-# from my_functions import *
+from my_functions import *
 #
 # update_mongo = UpdateMongo()
 # # print(update_mongo.get_symbols())
@@ -24,6 +24,7 @@ import time
 import requests
 from datetime import datetime as dt
 
+update_mongo = UpdateMongo()
 start = dt.now()
 
 
@@ -48,7 +49,8 @@ if __name__ == '__main__':
     #         print('%r generated an exception: %s' % ('', exc))
     #     else:
     #         # print('%r page is %d bytes' % ('', len(data)))
-    time.sleep(.004)
+    # time.sleep(.004)
+    update_mongo.lv2_quick_sell('AMD')
     end = dt.now()
 
     used = end - start
