@@ -680,9 +680,9 @@ class UpdateMongo(object):
             else:
                 self.db.orders.insert_one(for_sell)
                 self.db.orders.insert_one(for_buy)
-                if verbose:
-                    print(for_buy, type(for_buy))
-                    print(for_sell, type(for_sell))
+                # if verbose:
+                #     print(for_buy, type(for_buy))
+                #     print(for_sell, type(for_sell))
             if verbose:
                 print(f'time used after lv2_quick_sell is done: {self.pt_time_used(now)}')
 
