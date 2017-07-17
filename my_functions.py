@@ -594,9 +594,10 @@ class UpdateMongo(object):
         # get all the pending orders of this stock
         orders = db.orders.find({'instrument': ins['url'], 'cancel': {'$ne': None}})
         pos = db.nonzero_positions.find_one({'instrument': ins['url']})
+        print(f"{pos['shares_held_for_buys']}{pos['quantity']}{pos['quantity']}")
         if not orders and not (
                             float(pos['shares_held_for_buys']) > 0 or float(pos['quantity']) > 0 or float(
-                    pos['shares_held_for_sells']) > 0):
+                    pos['quantity']) > 0):
             return
         if verbose:
             print(f'time used before with statement: {self.pt_time_used(now)}')
