@@ -159,7 +159,7 @@ class UpdateMongo(object):
 
     def get_instrument(self, symbol: str) -> dict:
         if symbol in self.mongo_cache['ins'] and (
-                    dt.datetime.now() - self.mongo_cache['ins'][symbol]['cache_time']).second < 1:
+                    dt.datetime.now() - self.mongo_cache['ins'][symbol]['cache_time']).seconds < 1:
             return self.mongo_cache['ins'][symbol]
         else:
             temp = self.db.instruments.find_one({'symbol': symbol})
