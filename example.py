@@ -82,7 +82,7 @@ if __name__ == "__main__":
 
     # wait 10 till the service is started
     # threading.Timer(30, check_connection).start()
-    set_interval(sync_mongo, .15)
+    # set_interval(sync_mongo, .15)
 
     pool = {}
     #

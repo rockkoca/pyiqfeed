@@ -38,16 +38,19 @@ def test_request():
 
 
 if __name__ == '__main__':
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        task = executor.submit(test_request)
-        print('after submit')
-        try:
-            data = task.result()
-            end = dt.now()
-        except Exception as exc:
-            print('%r generated an exception: %s' % ('', exc))
-        else:
-            # print('%r page is %d bytes' % ('', len(data)))
-            used = end - start
-            us = used.microseconds
-            print(f'time used {us / 1000} ms or {us / 1000 / 1000} secs')
+    # with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    #     task = executor.submit(test_request)
+    #     print('after submit')
+    #     try:
+    #         data = task.result()
+    #         end = dt.now()
+    #     except Exception as exc:
+    #         print('%r generated an exception: %s' % ('', exc))
+    #     else:
+    #         # print('%r page is %d bytes' % ('', len(data)))
+    time.sleep(.004)
+    end = dt.now()
+
+    used = end - start
+    us = used.microseconds
+    print(f'time used {us / 1000} ms or {us / 1000 / 1000} secs')

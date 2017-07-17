@@ -85,8 +85,8 @@ start = dt.datetime.now()
 # print(trader.url('https://api.robinhood.com/accounts/5SA59772/positions/940fc3f5-1db5-4fed-b452-f3a2e4562b5f/'))
 # test = db.instruments.find_one({'auto.lv2_quick_sell': True})
 # orders = db.orders.find({'symbol': 'AMD', 'cancel': {'$ne': None}})
-for j in range(1000):
-    sync_mongo()
+# for j in range(1000):
+#     sync_mongo()
 
 # lv2 = {
 #     'bids': {},
@@ -137,4 +137,6 @@ print(f'time used {us / 1000} ms or {us / 1000 / 1000} secs')
 print(f'time used {us / 1000 / 1000} ms or {us / 1000 / 1000 / 1000} secs')
 # for order in search_mongo('orders'):
 #     print(order)
-print(update_mongo.mongo_cache['orders'])
+# print(update_mongo.mongo_cache['orders'])
+print(update_mongo.get_instrument('AMD'))
+print(update_mongo.mongo_cache)

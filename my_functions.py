@@ -14,6 +14,7 @@ import pyiqfeed as iq
 import requests
 import datetime
 import numpy as np
+import math
 from typing import Sequence
 import time
 from passwords import dtn_product_id, dtn_login, dtn_password
@@ -87,6 +88,12 @@ def is_server() -> bool:
     return sys.platform != 'darwin'
 
 
+class Math(math):
+    @staticmethod
+    def to_2_decimal_floor(f: float):
+        return f'{math.floor(f*100)/100:.2f}'
+
+
 class UpdateMongo(object):
     stop = 0
     static_cache = {
@@ -98,6 +105,7 @@ class UpdateMongo(object):
         'update_mongo_time': {},
         'trend': {},
         'date': {},
+        'lv1': {},
         'lv2': {},
         'lv2_result': {},
 
@@ -146,7 +154,18 @@ class UpdateMongo(object):
         return symbols
 
     def ins_to_symbol(self, ins: str) -> str:
-        return self.mongo_cache['ins_to_symbol'].get(ins, {}).get('symbol', '')
+        return self.get_instrument().get('symbol', '')
+
+    def get_instrument(self, symbol: str) -> dict:
+        if symbol in self.mongo_cache['ins']:
+            return self.mongo_cache['ins'][symbol]
+        else:
+            self.mongo_cache['ins'][symbol] = self.db.instruments.find_one({'symbol': symbol})
+            if not self.mongo_cache['ins'][symbol]:
+                return {}
+            self.mongo_cache['ins'][self.mongo_cache['ins'][symbol]['url']] = self.db.instruments.find_one(
+                {'symbol': symbol})
+            return self.mongo_cache['ins'][symbol]
 
     @staticmethod
     def _process_regional_quote(data: np.array) -> dict:
@@ -368,6 +387,9 @@ class UpdateMongo(object):
 
             if new_dic['tick'] == old.get('tick', 0):
                 return
+            else:
+                self.cache['lv1'][symbol] = new_dic
+
             if update_meteor:
                 result = col.update_one(
                     {'symbol': new_dic['symbol']},
@@ -544,6 +566,50 @@ class UpdateMongo(object):
                 used = end - start
                 us = used.microseconds
                 print(f'time used after mongo update {us / 1000} ms or {us / 1000 / 1000} secs')
+
+    def lv2_quick_sell(self, symbol: str):
+        db = self.get_db()
+        # first find the instrument of this symbol
+        ins = self.get_instrument(symbol)
+
+        if not ins:  # this is not going to happen!!!!!, just in case
+            ins = trader.instrument(symbol.upper())
+            db.instruments.insert({'symbol': symbol}, ins, True)
+        # get all the pending orders of this stock
+        orders = db.orders.find({'instrument': ins['url'], 'cancel': {'$ne': None}})
+        pos = db.nonzero_positions.find_one({'instrument': ins['url']})
+        with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
+
+            canceled_orders = {executor.submit(self.cancel_order, order=order): order for order in orders}
+            order_types = {}
+            for order in orders:
+                canceled_orders[executor.submit(self.cancel_order, order=order)] = order
+                order_types[order['type']] = [order] if order['type'] not in order_types else order_types[
+                                                                                                  order['type']] + [
+                                                                                                  order]
+
+                order_types[order['side']] = [order] if order['side'] not in order_types else order_types[
+                                                                                                  order['side']] + [
+                                                                                                  order]
+                # TODO 如果有 pending limit selling order, 立即取消订单, 并在 8 ms 后发出一个市价单清仓, 不要等返回消息
+                # TODO 因为需要至少20ms才能知道结果. 这时也需要更新 position, 然后没有销售掉的情况下再次发送市价单清仓
+                # TODO This is the most important one!!!
+
+
+                # TODO if no pending orders and has position, submit a market sell order right away
+                # TODO 但是任然需要更新 position 进行确认
+                ####################
+
+                # TODO if has pending buying order. cancel right away, and place a market sell at same time
+                # TODO 因为订单可能已经被执行, 所以同时发出一个市价单去清仓
+                # TODO 但是, 也有可能没有执行或者没有完全执行. 这是需要更新 position 并且再次下一个市价单
+
+    def place_market_sell_order(self, ins: dict):
+
+        pass
+
+    def cancel_order(self, order: dict):
+        pass
 
     @staticmethod
     def call_server_api(path: str, data={}):

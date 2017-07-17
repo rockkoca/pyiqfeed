@@ -63,5 +63,12 @@ if __name__ == "__main__":
     bars = threading.Timer(5, get_live_multi_interval_bars, [{}, 30, 1, True])
     bars.start()
 
-    while 1:
-        time.sleep(5)
+    # Modify code below to connect to the socket etc as described above
+    admin = iq.AdminConn(name="Launcher")
+    admin_listener = iq.VerboseAdminListener("Launcher-listen")
+    admin.add_listener(admin_listener)
+    with iq.ConnConnector([admin]) as connected:
+        admin.client_stats_on()
+        # while not os.path.isfile(ctrl_file):
+        while 1:
+            time.sleep(10)
