@@ -676,13 +676,13 @@ class UpdateMongo(object):
                 for_sell = selling_orders['for_sell'].result()
                 for_buy = selling_orders['for_buy'].result()
             except Exception as e:
-                print(e)
+                print(f'exception in getting data for for_sell and for_buy {e}')
             else:
                 self.db.orders.insert_one(for_sell)
                 self.db.orders.insert_one(for_buy)
-                # if verbose:
-                #     print(for_buy, type(for_buy))
-                #     print(for_sell, type(for_sell))
+                if verbose:
+                    print(for_buy, type(for_buy))
+                    print(for_sell, type(for_sell))
             if verbose:
                 print(f'time used after lv2_quick_sell is done: {self.pt_time_used(now)}')
 
