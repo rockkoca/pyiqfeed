@@ -554,12 +554,16 @@ class UpdateMongo(object):
                     )
 
                     try:
-                        data = task.result()
+                        if type(task) != str:
+                            data = task.result()
+                        else:
+                            data = None
                     except Exception as exc:
                         print('%r generated an exception: %s' % ('v2-quick-sell' + symbol, exc))
                     else:
-                        print('%r submitted, %s, used %s' % ('v2-quick-sell' + symbol, data,
-                                                             self.pt_time_used(start_task)))
+                        if data:
+                            print('%r submitted, %s, used %s' % ('v2-quick-sell' + symbol, data,
+                                                                 self.pt_time_used(start_task)))
                 # print(dir(result))
                 # print(result.matched_count, result.row_result)
                 pass
@@ -713,12 +717,12 @@ class UpdateMongo(object):
             return order
 
     @staticmethod
-    def pt_time_used(start: dt.datetime, pt='') -> None:
+    def pt_time_used(start: dt.datetime, message='') -> None:
         us = (dt.datetime.now() - start).microseconds
-        if pt == '':
+        if message == '':
             return f' {us / 1000} ms or {us / 1000 / 1000} secs'
         else:
-            print(f'{pt}: time used {us / 1000} ms or {us / 1000 / 1000} secs')
+            print(f'{message}: time used {us / 1000} ms or {us / 1000 / 1000} secs')
 
     @staticmethod
     def cancel_order(order: dict):
