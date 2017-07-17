@@ -655,7 +655,7 @@ class UpdateMongo(object):
                 print(f"market selling for_sell {pos['quantity']}")
             if verbose:
                 print(f'time used after market selling for_sell: {self.pt_time_used(now)}')
-                
+
             try:
                 pos = self.get_position(pos)
             except Exception as e:
@@ -696,9 +696,12 @@ class UpdateMongo(object):
             return order
 
     @staticmethod
-    def pt_time_used(start: dt.datetime) -> None:
+    def pt_time_used(start: dt.datetime, pt='') -> None:
         us = (dt.datetime.now() - start).microseconds
-        print(f'time used {us / 1000} ms or {us / 1000 / 1000} secs')
+        if pt != '':
+            return f'time used {us / 1000} ms or {us / 1000 / 1000} secs'
+        else:
+            print(f'{pt}: time used {us / 1000} ms or {us / 1000 / 1000} secs')
 
     @staticmethod
     def cancel_order(order: dict):
