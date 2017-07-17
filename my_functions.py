@@ -632,7 +632,9 @@ class UpdateMongo(object):
 
             if 'buy' in order_types:
                 selling_orders['for_buy'] = executor.submit(self.place_market_sell_order, ins=ins,
-                                                            qty=int(float(pos['shares_held_for_buys'])))
+                                                            qty=int(float(pos['shares_held_for_buys'])),
+                                                            avg_price=float(pos['average_buy_price'])
+                                                            )
                 if verbose:
                     print(f"market selling for_buy {pos['shares_held_for_buys']}")
 
