@@ -33,7 +33,7 @@ import robinhood.Robinhood as RB
 from robinhood.Robinhood import *
 from robinhood.credentials import *
 
-verbose = 1
+verbose = 0
 look_back_bars = 720
 
 trader = RB.Robinhood()
