@@ -683,6 +683,8 @@ class UpdateMongo(object):
                 if verbose:
                     print(for_buy)
                     print(for_sell)
+            if verbose:
+                print(f'time used after lv2_quick_sell is done: {self.pt_time_used(now)}')
 
     @staticmethod
     def place_market_sell_order(ins: dict, qty: int, avg_price: float) -> dict:
