@@ -495,7 +495,7 @@ class UpdateMongo(object):
                     'asks': {}
                 }
                 # symbol', 'MMID', 'bid', 'ask', 'bid_size', 'ask_size', 'bidinfovalid', 'askinfovalid'
-                print(len(new_dic.keys()))
+                # print(len(new_dic.keys()))
                 for val in new_dic.values():
 
                     if val['bidinfovalid']:
