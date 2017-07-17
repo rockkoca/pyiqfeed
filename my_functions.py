@@ -159,7 +159,7 @@ class UpdateMongo(object):
 
     def get_instrument(self, symbol: str) -> dict:
         if symbol in self.mongo_cache['ins'] and (
-                    dt.datetime.now() - self.mongo_cache['ins'][symbol]['cache_time']).second > 0:
+                    dt.datetime.now() - self.mongo_cache['ins'][symbol]['cache_time']).second < 1:
             return self.mongo_cache['ins'][symbol]
         else:
             temp = self.db.instruments.find_one({'symbol': symbol})
@@ -542,9 +542,7 @@ class UpdateMongo(object):
                     ask_size = result['asks_price']
 
                     if len(bid_size) > 0 and len(ask_size) > 0 and bid_size[0] / ask_size[0] < .7:
-                        # task = executor.submit(self.call_server_api, path='v2-quick-sell', data={
-                        #     'symbol': symbol
-                        # })
+                        task = executor.submit(self.lv2_quick_sell, symbol=symbol)
                         pass
 
                     result = col.update_one(
@@ -560,8 +558,8 @@ class UpdateMongo(object):
                     except Exception as exc:
                         print('%r generated an exception: %s' % ('v2-quick-sell' + symbol, exc))
                     else:
-                        print('%r submitted, %s, used %s ms' % ('v2-quick-sell' + symbol, data,
-                                                                (dt.datetime.now() - start_task).microseconds / 1000))
+                        print('%r submitted, %s, used %s' % ('v2-quick-sell' + symbol, data,
+                                                             self.pt_time_used(start_task)))
                 # print(dir(result))
                 # print(result.matched_count, result.row_result)
                 pass
