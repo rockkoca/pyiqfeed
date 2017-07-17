@@ -687,7 +687,7 @@ class UpdateMongo(object):
                     print(for_buy, type(for_buy))
 
             try:
-                for_buy = selling_orders['for_buy'].result()
+                for_buy = selling_orders['for_sell'].result()
             except Exception as e:
                 print(f'exception in getting data for for_sell {e}')
             else:
@@ -704,8 +704,7 @@ class UpdateMongo(object):
             order = trader.place_order(instrument=ins, quantity=qty, price=Math.to_2_decimal_floor(avg_price * .97),
                                        transaction=Transaction.SELL)
         except Exception as e:
-            print(e)
-            return {'detail': e}
+            raise e
         else:
             return order
 
