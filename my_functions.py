@@ -576,10 +576,6 @@ class UpdateMongo(object):
     def lv2_quick_sell(self, symbol: str):
         now = dt.datetime.now()
         key = f'lv2_quick_sell-{symbol}'
-        if key in self.cache and (now - self.cache[key]).seconds < 1:
-            self.cache[key] = now
-            return
-        self.cache[key] = now
 
         db = self.get_db()
         # first find the instrument of this symbol
@@ -599,6 +595,11 @@ class UpdateMongo(object):
                             float(pos['shares_held_for_buys']) > 0 or float(pos['quantity']) > 0 or float(
                     pos['quantity']) > 0):
             return
+        if key in self.cache and (now - self.cache[key]).seconds < 1:
+            self.cache[key] = now
+            return
+        self.cache[key] = now
+
         if verbose:
             print(f'time used before with statement: {self.pt_time_used(now)}')
         with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
