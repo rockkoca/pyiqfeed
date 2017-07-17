@@ -49,9 +49,9 @@ if __name__ == '__main__':
     #     else:
     #         # print('%r page is %d bytes' % ('', len(data)))
     # time.sleep(.004)
-    # update_mongo.lv2_quick_sell('AMD')
+    update_mongo.lv2_quick_sell('AMD')
     # trader.quote_data('AMD')
-    update_mongo.place_market_sell_order(amd, 10, 10.00)
+    # print(update_mongo.place_market_sell_order(amd, 10, 10.00))
     end = dt.now()
 
     used = end - start

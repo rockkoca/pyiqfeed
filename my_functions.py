@@ -590,6 +590,8 @@ class UpdateMongo(object):
                             float(pos['shares_held_for_buys']) > 0 or float(pos['quantity']) > 0 or float(
                     pos['shares_held_for_sells']) > 0):
             return
+        if verbose:
+            print(f'time used before with statement: {self.pt_time_used(now)}')
         with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
 
             # 首先不管三七二十一, 立即取消所有订单!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -617,6 +619,8 @@ class UpdateMongo(object):
                                                                                                   order]
                 if verbose:
                     print(f'canceling {order}')
+            if verbose:
+                print(f'time used before for_buy order: {self.pt_time_used(now)}')
 
             if 'buy' in order_types:
                 selling_orders['for_buy'] = executor.submit(self.place_market_sell_order, ins=ins,
@@ -632,19 +636,26 @@ class UpdateMongo(object):
             #     time.sleep(.01)  # 暂定10ms, 然后更新 position
             # else:
             #     time.sleep(.003)  # 暂定10ms, 然后更新 position
+            if verbose:
+                print(f'time used before 等待所有取消订单: {self.pt_time_used(now)}')
             # TODO 等待所有取消订单成功后更新 position
             for future in concurrent.futures.as_completed(canceled_orders):
                 try:
                     data = future.result()
                 except Exception as e:
                     print(e)
+            if verbose:
+                print(f'time used after 等待所有取消订单: {self.pt_time_used(now)}')
+
             # 先发出一个市价单清仓在更新 position, 因为更新 position 还需要大概20ms
             if 'sell' in order_types or float(pos['quantity']) > 0:
                 selling_orders['for_sell'] = executor.submit(self.place_market_sell_order, ins=ins,
                                                              qty=int(float(pos['quantity'])),
                                                              avg_price=float(pos['average_buy_price']))
                 print(f"market selling for_sell {pos['quantity']}")
-
+            if verbose:
+                print(f'time used after market selling for_sell: {self.pt_time_used(now)}')
+                
             try:
                 pos = self.get_position(pos)
             except Exception as e:
@@ -658,6 +669,8 @@ class UpdateMongo(object):
                     self.db.orders.insert_one(result)
                     if verbose:
                         print(f"market selling final {pos['quantity']} {result}")
+            if verbose:
+                print(f'time used after market selling final: {self.pt_time_used(now)}')
 
             try:
                 for_sell = selling_orders['for_sell'].result()
@@ -681,6 +694,11 @@ class UpdateMongo(object):
             return {'detail': e}
         else:
             return order
+
+    @staticmethod
+    def pt_time_used(start: dt.datetime) -> None:
+        us = (dt.datetime.now() - start).microseconds
+        print(f'time used {us / 1000} ms or {us / 1000 / 1000} secs')
 
     @staticmethod
     def cancel_order(order: dict):
