@@ -686,7 +686,7 @@ class UpdateMongo(object):
                     else:
                         if verbose:
                             print(f"market selling final {pos['quantity']} {result}")
-            if verbose:
+            if verbose or 1:
                 print(f'time used after market selling final: {self.pt_time_used(now)}')
 
             try:
