@@ -702,7 +702,7 @@ class UpdateMongo(object):
                     bid_size = lv2['bids_price'][0]
                     ask_size = lv2['asks_price'][0]
 
-                    if bid_size / ask_size > .4 and avg_price - highest_bid < .01:
+                    if bid_size / ask_size > .35 and avg_price - highest_bid < .005:
                         try:
                             result = self.place_market_sell_order(ins=ins, qty=pos['quantity'],
                                                                   avg_price=float(pos['average_buy_price']))
