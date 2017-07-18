@@ -94,6 +94,10 @@ class Math(object):
     def to_2_decimal_floor(f: float) -> str:
         return f'{math.floor(f*100)/100:.2f}'
 
+    @staticmethod
+    def to_2_decimal_ceil(f: float) -> str:
+        return f'{math.ceil(f*100)/100:.2f}'
+
 
 class UpdateMongo(object):
     stop = 0
@@ -524,7 +528,7 @@ class UpdateMongo(object):
                     'asks_total': sum(lv2['asks'].values())
                 }
 
-                # self.cache['lv2_result'][symbol] = result
+                self.cache['lv2_result'][symbol] = result
                 # print(result)
 
                 # TODO trigger quick sell, cancel order
@@ -576,7 +580,6 @@ class UpdateMongo(object):
     def lv2_quick_sell(self, symbol: str):
         now = dt.datetime.now()
         key = f'lv2_quick_sell-{symbol}'
-
         db = self.get_db()
         # first find the instrument of this symbol
         ins = self.get_instrument(symbol)
@@ -587,21 +590,35 @@ class UpdateMongo(object):
 
         if not ins.get('auto', {}).get('lv2_quick_sell', False):
             return
+
+        if key in self.cache and (now - self.cache[key]).seconds < 1:
+            # self.cache[key] = now
+            return
+        self.cache[key] = now
+
         # get all the pending orders of this stock
+
         orders = db.orders.find({'instrument': ins['url'], 'cancel': {'$ne': None}})
         pos = db.nonzero_positions.find_one({'instrument': ins['url']})
-        #print(f"{orders.count()}{pos['shares_held_for_buys']}{pos['quantity']}{pos['quantity']}")
+        lv2 = self.cache['lv2_result'][symbol]
+
+        # 如果 bid - avg > .01, do nothing, 有利润的时候不要乱下卖单
+        # 如果 损失太多也不要乱下单, 暂时应该手动决定
+
+        highest_bid = lv2['bids'][0]
+        avg_price = float(pos['average_buy_price'])
+        if len(lv2['bids']) > 0 and ((highest_bid - avg_price) > .01 or avg_price - highest_bid > .01):
+            return
+
+        # print(f"{orders.count()}{pos['shares_held_for_buys']}{pos['quantity']}{pos['quantity']}")
         if orders.count() == 0 and not (
                             float(pos['shares_held_for_buys']) > 0 or float(pos['quantity']) > 0 or float(
                     pos['quantity']) > 0):
             return
-        if key in self.cache and (now - self.cache[key]).seconds < 1:
-            self.cache[key] = now
-            return
-        self.cache[key] = now
 
         if verbose:
             print(f'time used before with statement: {self.pt_time_used(now)}')
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
 
             # 首先不管三七二十一, 立即取消所有订单!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -677,15 +694,28 @@ class UpdateMongo(object):
 
                 if pos['quantity'] > 0:
                     # 如果还有 position, 清理掉, 因为上一步的市价单的 qty 可能不正确
-                    try:
-                        result = self.place_market_sell_order(ins=ins, qty=pos['quantity'],
-                                                              avg_price=float(pos['average_buy_price']))
-                        self.db.orders.insert_one(result)
-                    except Exception as e:
-                        print(f'market selling final exception {e}')
+                    # 如果还有足够的 bid 提交一个 market order, 否则提交一个 limit order
+
+                    lv2 = self.cache['lv2_result'][symbol]
+                    highest_bid = lv2['bids'][0]
+                    avg_price = float(pos['average_buy_price'])
+                    bid_size = lv2['bids_price'][0]
+                    ask_size = lv2['asks_price'][0]
+
+                    if bid_size / ask_size > .4 and avg_price - highest_bid < .01:
+                        try:
+                            result = self.place_market_sell_order(ins=ins, qty=pos['quantity'],
+                                                                  avg_price=float(pos['average_buy_price']))
+                            self.db.orders.insert_one(result)
+                        except Exception as e:
+                            print(f'market selling final exception {e}')
+                        else:
+                            if verbose:
+                                print(f"market selling final {pos['quantity']} {result}")
                     else:
-                        if verbose:
-                            print(f"market selling final {pos['quantity']} {result}")
+                        # 在这里可以下一个 limit order,
+                        pass
+
             if verbose or 1:
                 print(f'time used after market selling final: {self.pt_time_used(now)}')
 
@@ -715,6 +745,16 @@ class UpdateMongo(object):
         try:
             order = trader.place_order(instrument=ins, quantity=qty, price=Math.to_2_decimal_floor(avg_price * .97),
                                        transaction=Transaction.SELL)
+        except Exception as e:
+            raise e
+        else:
+            return order
+
+    @staticmethod
+    def place_limit_sell_order(ins: dict, qty: int, limit_price: float) -> dict:
+        try:
+            order = trader.place_order(instrument=ins, quantity=qty, price=Math.to_2_decimal_floor(limit_price * .97),
+                                       transaction=Transaction.SELL, order='limit')
         except Exception as e:
             raise e
         else:
