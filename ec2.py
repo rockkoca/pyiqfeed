@@ -197,6 +197,6 @@ def request_spot_instance():
         while len(get_instances()) < 2:
             time.sleep(2)
 
-        associate_address()
+    associate_address()
 if __name__ == '__main__':
     request_spot_instance()
