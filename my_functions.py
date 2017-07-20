@@ -607,7 +607,7 @@ class UpdateMongo(object):
 
         highest_bid = lv2['bids'][0]
         avg_price = float(pos['average_buy_price'])
-        if len(lv2['bids']) > 0 and ((highest_bid - avg_price) > .01 or avg_price - highest_bid > .01):
+        if len(lv2['bids']) > 0 and ((highest_bid - avg_price) > .01 or avg_price - highest_bid > .005):
             return
 
         # print(f"{orders.count()}{pos['shares_held_for_buys']}{pos['quantity']}{pos['quantity']}")
@@ -704,19 +704,19 @@ class UpdateMongo(object):
                     bid_size = lv2['bids_price'][0]
                     ask_size = lv2['asks_price'][0]
 
-                    # if bid_size / ask_size > .35 and avg_price - highest_bid < .005:
-                    try:
-                        result = self.place_limit_sell_order(ins=ins, qty=pos['quantity'],
-                                                             avg_price=float(pos['average_buy_price']))
-                        self.db.orders.insert_one(result)
-                    except Exception as e:
-                        print(f'market selling final exception {e}')
-                    else:
-                        if verbose:
-                            print(f"market selling final {pos['quantity']} {result}")
-                            # else:
-                            #     # 在这里可以下一个 limit order,
-                            #     pass
+                    if -.005 <= avg_price - highest_bid < .005:
+                        try:
+                            result = self.place_limit_sell_order(ins=ins, qty=pos['quantity'],
+                                                                 avg_price=float(pos['average_buy_price']))
+                            self.db.orders.insert_one(result)
+                        except Exception as e:
+                            print(f'market selling final exception {e}')
+                        else:
+                            if verbose:
+                                print(f"market selling final {pos['quantity']} {result}")
+                                # else:
+                                #     # 在这里可以下一个 limit order,
+                                #     pass
 
             if verbose or 1:
                 print(f'time used after market selling final: {self.pt_time_used(now)}')
