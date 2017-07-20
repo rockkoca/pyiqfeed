@@ -696,25 +696,27 @@ class UpdateMongo(object):
                     # 如果还有 position, 清理掉, 因为上一步的市价单的 qty 可能不正确
                     # 如果还有足够的 bid 提交一个 market order, 否则提交一个 limit order
 
+                    #  TODO 暂时不使用 MARKET ORDER, 损失率太高了
+
                     lv2 = self.cache['lv2_result'][symbol]
                     highest_bid = lv2['bids'][0]
                     avg_price = float(pos['average_buy_price'])
                     bid_size = lv2['bids_price'][0]
                     ask_size = lv2['asks_price'][0]
 
-                    if bid_size / ask_size > .35 and avg_price - highest_bid < .005:
-                        try:
-                            result = self.place_market_sell_order(ins=ins, qty=pos['quantity'],
-                                                                  avg_price=float(pos['average_buy_price']))
-                            self.db.orders.insert_one(result)
-                        except Exception as e:
-                            print(f'market selling final exception {e}')
-                        else:
-                            if verbose:
-                                print(f"market selling final {pos['quantity']} {result}")
+                    # if bid_size / ask_size > .35 and avg_price - highest_bid < .005:
+                    try:
+                        result = self.place_limit_sell_order(ins=ins, qty=pos['quantity'],
+                                                             avg_price=float(pos['average_buy_price']))
+                        self.db.orders.insert_one(result)
+                    except Exception as e:
+                        print(f'market selling final exception {e}')
                     else:
-                        # 在这里可以下一个 limit order,
-                        pass
+                        if verbose:
+                            print(f"market selling final {pos['quantity']} {result}")
+                            # else:
+                            #     # 在这里可以下一个 limit order,
+                            #     pass
 
             if verbose or 1:
                 print(f'time used after market selling final: {self.pt_time_used(now)}')
@@ -753,7 +755,7 @@ class UpdateMongo(object):
     @staticmethod
     def place_limit_sell_order(ins: dict, qty: int, limit_price: float) -> dict:
         try:
-            order = trader.place_order(instrument=ins, quantity=qty, price=Math.to_2_decimal_floor(limit_price * .97),
+            order = trader.place_order(instrument=ins, quantity=qty, price=Math.to_2_decimal_floor(limit_price),
                                        transaction=Transaction.SELL, order='limit')
         except Exception as e:
             raise e
