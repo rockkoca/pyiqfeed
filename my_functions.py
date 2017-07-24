@@ -544,8 +544,11 @@ class UpdateMongo(object):
                     start_task = dt.datetime.now()
                     bid_size = result['bids_price']
                     ask_size = result['asks_price']
+                    bids = result['bids']
+                    asks = result['asks']
 
-                    if len(bid_size) > 0 and len(ask_size) > 0 and bid_size[0] / ask_size[0] < .6:
+                    if len(bid_size) > 0 and len(ask_size) > 0 and (
+                            bids[0] == asks[0] or bid_size[0] / ask_size[0] < .6):
                         task = executor.submit(self.lv2_quick_sell, symbol=symbol)
                         pass
 
