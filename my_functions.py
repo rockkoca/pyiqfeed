@@ -761,7 +761,7 @@ class UpdateMongo(object):
         except Exception as e:
             print(e)
             raise e
-        else:˚
+        else:
             return order
 
     @staticmethod
