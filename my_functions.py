@@ -720,26 +720,27 @@ class UpdateMongo(object):
 
             if verbose or 1:
                 print(f'time used after market selling final: {self.pt_time_used(now)}')
+            if 'for_buy' in selling_orders:
+                try:
+                    for_buy = selling_orders['for_buy'].result()
+                except Exception as e:
+                    print(f"exception in getting data for for_buy {e}{type(e)}")
+                    # print(f"exception in getting data for for_buy {selling_orders['for_buy'].exception()}")
+                else:
+                    self.db.orders.insert_one(for_buy)
+                    if verbose:
+                        print(for_buy, type(for_buy))
 
-            try:
-                for_buy = selling_orders['for_buy'].result()
-            except Exception as e:
-                print(f"exception in getting data for for_buy {e}{type(e)}")
-                # print(f"exception in getting data for for_buy {selling_orders['for_buy'].exception()}")
-            else:
-                self.db.orders.insert_one(for_buy)
-                if verbose:
-                    print(for_buy, type(for_buy))
-
-            try:
-                for_buy = selling_orders['for_sell'].result()
-            except Exception as e:
-                print(f"exception in getting data for for_sell {e}{type(e)}")
-                # print(f"exception in getting data for for_sell {selling_orders['for_buy'].exception()}")
-            else:
-                self.db.orders.insert_one(for_buy)
-                if verbose:
-                    print(for_buy, type(for_buy))
+            if 'for_sell' in selling_orders:
+                try:
+                    for_buy = selling_orders['for_sell'].result()
+                except Exception as e:
+                    print(f"exception in getting data for for_sell {e}{type(e)}")
+                    # print(f"exception in getting data for for_sell {selling_orders['for_buy'].exception()}")
+                else:
+                    self.db.orders.insert_one(for_buy)
+                    if verbose:
+                        print(for_buy, type(for_buy))
 
             if verbose:
                 print(f'time used after lv2_quick_sell is done: {self.pt_time_used(now)}')
@@ -749,7 +750,7 @@ class UpdateMongo(object):
         try:
             order = trader.place_order(instrument=ins, quantity=qty, price=Math.to_2_decimal_floor(avg_price * .97),
                                        transaction=Transaction.SELL)
-            print(order)
+            # print(order)
             return order
         except Exception as e:
             print(e)
@@ -760,7 +761,7 @@ class UpdateMongo(object):
         try:
             order = trader.place_order(instrument=ins, quantity=qty, price=Math.to_2_decimal_floor(avg_price),
                                        transaction=Transaction.SELL, order='limit')
-            print(order)
+            # print(order)
             return order
 
         except Exception as e:
