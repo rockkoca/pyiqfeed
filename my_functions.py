@@ -578,6 +578,8 @@ class UpdateMongo(object):
                 print(f'time used after mongo update {us / 1000} ms or {us / 1000 / 1000} secs')
 
     def lv2_quick_sell(self, symbol: str):
+        lv2_quick_sell_verbose = 1
+
         now = dt.datetime.now()
         key = f'lv2_quick_sell-{symbol}'
         db = self.get_db()
@@ -616,7 +618,7 @@ class UpdateMongo(object):
                     pos['quantity']) > 0):
             return
         print(f'The time to sell {now}')
-        if verbose:
+        if verbose or lv2_quick_sell_verbose:
             print(f'time used before with statement: {self.pt_time_used(now)}')
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
@@ -644,9 +646,9 @@ class UpdateMongo(object):
                 order_types[order['side']] = [order] if order['side'] not in order_types else order_types[
                                                                                                   order['side']] + [
                                                                                                   order]
-                if verbose:
+                if verbose or lv2_quick_sell_verbose:
                     print(f'canceling {order}')
-            if verbose:
+            if verbose or lv2_quick_sell_verbose:
                 print(f'time used before for_buy order: {self.pt_time_used(now)}')
 
             if 'buy' in order_types:
@@ -654,7 +656,7 @@ class UpdateMongo(object):
                                                             qty=int(float(pos['shares_held_for_buys'])),
                                                             avg_price=float(pos['average_buy_price'])
                                                             )
-                if verbose:
+                if verbose or lv2_quick_sell_verbose:
                     print(f"market selling for_buy {pos['shares_held_for_buys']}")
 
             # if 'sell' in order_types:
@@ -665,7 +667,7 @@ class UpdateMongo(object):
             #     time.sleep(.01)  # 暂定10ms, 然后更新 position
             # else:
             #     time.sleep(.003)  # 暂定10ms, 然后更新 position
-            if verbose:
+            if verbose or lv2_quick_sell_verbose:
                 print(f'time used before 等待所有取消订单: {self.pt_time_used(now)}')
             # TODO 等待所有取消订单成功后更新 position
             for future in concurrent.futures.as_completed(canceled_orders):
@@ -673,7 +675,7 @@ class UpdateMongo(object):
                     data = future.result()
                 except Exception as e:
                     print(e)
-            if verbose:
+            if verbose or lv2_quick_sell_verbose:
                 print(f'time used after 等待所有取消订单: {self.pt_time_used(now)}')
 
             # 先发出一个市价单清仓在更新 position, 因为更新 position 还需要大概20ms
@@ -682,7 +684,7 @@ class UpdateMongo(object):
                                                              qty=int(float(pos['quantity'])),
                                                              avg_price=float(pos['average_buy_price']))
                 print(f"market selling for_sell {pos['quantity']}")
-            if verbose:
+            if verbose or lv2_quick_sell_verbose:
                 print(f'time used after market selling for_sell: {self.pt_time_used(now)}')
 
             try:
@@ -712,13 +714,13 @@ class UpdateMongo(object):
                         except Exception as e:
                             print(f'market selling final exception {e}')
                         else:
-                            if verbose:
+                            if verbose or lv2_quick_sell_verbose:
                                 print(f"market selling final {pos['quantity']} {result}")
                                 # else:
                                 #     # 在这里可以下一个 limit order,
                                 #     pass
 
-            if verbose or 1:
+            if verbose or lv2_quick_sell_verbose:
                 print(f'time used after market selling final: {self.pt_time_used(now)}')
             if 'for_buy' in selling_orders:
                 try:
@@ -742,7 +744,7 @@ class UpdateMongo(object):
                     if verbose:
                         print(for_buy, type(for_buy))
 
-            if verbose:
+            if verbose or lv2_quick_sell_verbose:
                 print(f'time used after lv2_quick_sell is done: {self.pt_time_used(now)}')
 
     @staticmethod
