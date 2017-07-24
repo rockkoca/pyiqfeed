@@ -615,7 +615,7 @@ class UpdateMongo(object):
                             float(pos['shares_held_for_buys']) > 0 or float(pos['quantity']) > 0 or float(
                     pos['quantity']) > 0):
             return
-
+        print(f'The time to sell {now}')
         if verbose:
             print(f'time used before with statement: {self.pt_time_used(now)}')
 
