@@ -747,6 +747,7 @@ class UpdateMongo(object):
         try:
             order = trader.place_order(instrument=ins, quantity=qty, price=Math.to_2_decimal_floor(avg_price * .97),
                                        transaction=Transaction.SELL)
+            print(order)
             return order
         except Exception as e:
             print(e)
@@ -757,6 +758,7 @@ class UpdateMongo(object):
         try:
             order = trader.place_order(instrument=ins, quantity=qty, price=Math.to_2_decimal_floor(avg_price),
                                        transaction=Transaction.SELL, order='limit')
+            print(order)
             return order
 
         except Exception as e:
