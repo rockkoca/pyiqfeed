@@ -609,7 +609,7 @@ class UpdateMongo(object):
 
         highest_bid = lv2['bids'][0]
         avg_price = float(pos['average_buy_price'])
-        if len(lv2['bids']) > 0 and ((highest_bid - avg_price) > .01 or avg_price - highest_bid > .005):
+        if len(lv2['bids']) > 0 and ((highest_bid - avg_price) > .005 or avg_price - highest_bid > .005):
             return
 
         # print(f"{orders.count()}{pos['shares_held_for_buys']}{pos['quantity']}{pos['quantity']}")
