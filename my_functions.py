@@ -545,7 +545,7 @@ class UpdateMongo(object):
                     bid_size = result['bids_price']
                     ask_size = result['asks_price']
 
-                    if len(bid_size) > 0 and len(ask_size) > 0 and bid_size[0] / ask_size[0] < .7:
+                    if len(bid_size) > 0 and len(ask_size) > 0 and bid_size[0] / ask_size[0] < .55:
                         task = executor.submit(self.lv2_quick_sell, symbol=symbol)
                         pass
 
