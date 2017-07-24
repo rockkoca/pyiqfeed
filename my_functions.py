@@ -724,7 +724,7 @@ class UpdateMongo(object):
             try:
                 for_buy = selling_orders['for_buy'].result()
             except Exception as e:
-                print(f"exception in getting data for for_buy {selling_orders['for_buy'].exceptions()}")
+                print(f"exception in getting data for for_buy {selling_orders['for_buy'].exception()}")
             else:
                 self.db.orders.insert_one(for_buy)
                 if verbose:
@@ -733,7 +733,7 @@ class UpdateMongo(object):
             try:
                 for_buy = selling_orders['for_sell'].result()
             except Exception as e:
-                print(f"exception in getting data for for_sell {selling_orders['for_buy'].exceptions()}")
+                print(f"exception in getting data for for_sell {selling_orders['for_buy'].exception()}")
             else:
                 self.db.orders.insert_one(for_buy)
                 if verbose:
