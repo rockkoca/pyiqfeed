@@ -650,7 +650,7 @@ class UpdateMongo(object):
                 print(f'time used before for_buy order: {self.pt_time_used(now)}')
 
             if 'buy' in order_types:
-                selling_orders['for_buy'] = executor.submit(self.place_limit_sell_order(), ins=ins,
+                selling_orders['for_buy'] = executor.submit(self.place_limit_sell_order, ins=ins,
                                                             qty=int(float(pos['shares_held_for_buys'])),
                                                             avg_price=float(pos['average_buy_price'])
                                                             )
@@ -678,7 +678,7 @@ class UpdateMongo(object):
 
             # 先发出一个市价单清仓在更新 position, 因为更新 position 还需要大概20ms
             if 'sell' in order_types or float(pos['quantity']) > 0:
-                selling_orders['for_sell'] = executor.submit(self.place_limit_sell_order(), ins=ins,
+                selling_orders['for_sell'] = executor.submit(self.place_limit_sell_order, ins=ins,
                                                              qty=int(float(pos['quantity'])),
                                                              avg_price=float(pos['average_buy_price']))
                 print(f"market selling for_sell {pos['quantity']}")

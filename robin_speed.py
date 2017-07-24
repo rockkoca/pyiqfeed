@@ -4,6 +4,7 @@ from datetime import datetime as dt
 from my_functions import *
 import requests
 import random
+from numba import jit
 
 update_mongo = UpdateMongo()
 db = update_mongo.get_db()
@@ -31,6 +32,40 @@ def random_lv2():
     }
 
 
+def lv2_speed():
+    lv2 = {
+        'bids': {},
+        'asks': {}
+    }  # symbol', 'MMID', 'bid', 'ask', 'bid_size', 'ask_size', 'bidinfovalid', 'askinfovalid'
+    for val in vals:
+
+        if val['bidinfovalid']:
+            bid = val['bid']
+            lv2['bids'][bid] = lv2['bids'].get(bid, 0) + val['bid_size']
+
+        if val['askinfovalid']:
+            ask = val['ask']
+            lv2['asks'][ask] = lv2['asks'].get(ask, 0) + val['ask_size']
+
+    lv2['symbol'] = 'AMD'
+
+    lv2['bids_order'] = sorted(list(lv2['bids'].keys()), reverse=True)
+    lv2['asks_order'] = sorted(list(lv2['asks'].keys()))
+    #
+    # lv2['bids_total'] = sum(lv2['bids'].values())
+    # lv2['asks_total'] = sum(lv2['asks'].values())
+    # print(lv2)
+    result = {
+        'symbol': 'AMD',
+        'bids': lv2['bids_order'],
+        'bids_price': [lv2['bids'][price] for price in lv2['bids_order']],
+        'asks': lv2['asks_order'],
+        'asks_price': [lv2['asks'][price] for price in lv2['asks_order']],
+        'bids_total': sum(lv2['bids'].values()),
+        'asks_total': sum(lv2['asks'].values())
+    }
+
+
 # vals = [random_lv2() for i in range(200)]
 
 # trader = Robinhood()
@@ -40,6 +75,7 @@ update_mongo = UpdateMongo()
 db = update_mongo.get_db()
 
 print(type(db.nonzero_positions.find_one({'_id': "vciE7HofYmyCTAFZX"})['quantity']))
+
 
 # print(trad)
 def search_mongo(ty: str):
@@ -74,6 +110,7 @@ def sync_mongo():
 
 
 start = dt.datetime.now()
+
 # trader.get_quote('AMD')
 # requests.get('https://api.robinhood.com/quotes/?symbols=GPRO,DRYS,AMD')
 # l = [x for x in range(200)]
@@ -90,37 +127,7 @@ start = dt.datetime.now()
 # for j in range(1000):
 #     sync_mongo()
 
-# lv2 = {
-#     'bids': {},
-#     'asks': {}
-# }  # symbol', 'MMID', 'bid', 'ask', 'bid_size', 'ask_size', 'bidinfovalid', 'askinfovalid'
-# for val in vals:
-#
-#     if val['bidinfovalid']:
-#         bid = val['bid']
-#         lv2['bids'][bid] = lv2['bids'].get(bid, 0) + val['bid_size']
-#
-#     if val['askinfovalid']:
-#         ask = val['ask']
-#         lv2['asks'][ask] = lv2['asks'].get(ask, 0) + val['ask_size']
-#
-# lv2['symbol'] = 'AMD'
-#
-# lv2['bids_order'] = sorted(list(lv2['bids'].keys()), reverse=True)
-# lv2['asks_order'] = sorted(list(lv2['asks'].keys()))
-# #
-# # lv2['bids_total'] = sum(lv2['bids'].values())
-# # lv2['asks_total'] = sum(lv2['asks'].values())
-# # print(lv2)
-# result = {
-#     'symbol': 'AMD',
-#     'bids': lv2['bids_order'],
-#     'bids_price': [lv2['bids'][price] for price in lv2['bids_order']],
-#     'asks': lv2['asks_order'],
-#     'asks_price': [lv2['asks'][price] for price in lv2['asks_order']],
-#     'bids_total': sum(lv2['bids'].values()),
-#     'asks_total': sum(lv2['asks'].values())
-# }
+
 
 end = dt.datetime.now()
 # print(result)

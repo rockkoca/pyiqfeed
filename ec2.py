@@ -199,5 +199,7 @@ def request_spot_instance():
     time.sleep(30)
 
     associate_address()
+
+
 if __name__ == '__main__':
     request_spot_instance()
