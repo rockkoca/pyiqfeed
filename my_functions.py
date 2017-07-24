@@ -753,7 +753,7 @@ class UpdateMongo(object):
             return order
 
     @staticmethod
-    def place_limit_sell_order(ins: dict, qty: int, limit_price: float) -> dict:
+    def place_limit_sell_order(ins: dict, qty: int, avg_price: float) -> dict:
         try:
             order = trader.place_order(instrument=ins, quantity=qty, price=Math.to_2_decimal_floor(limit_price),
                                        transaction=Transaction.SELL, order='limit')
