@@ -551,9 +551,9 @@ class UpdateMongo(object):
                                     bids[0] == asks[0] or bid_size[0] / ask_size[0] < .6):
                         task = executor.submit(self.lv2_quick_sell, symbol=symbol)
                         if bids[0] == asks[0]:
-                            print(f'BEFORE LV2 QUICK SELL \n bis_size: {bid_size} VS ask_size: {ask_size}')
+                            print(f'BEFORE LV2 QUICK SELL \n bis_size: {bid_size} VS\n bid_price: {bids}')
 
-                            print(f"bid_price: {bids[0]} VS ask_price: {asks[0]}")
+                            print(f"ask_price: {asks} \nask_size: {ask_size} VS")
                         pass
 
                     result = col.update_one(
