@@ -755,7 +755,7 @@ class UpdateMongo(object):
     @staticmethod
     def place_limit_sell_order(ins: dict, qty: int, avg_price: float) -> dict:
         try:
-            order = trader.place_order(instrument=ins, quantity=qty, price=Math.to_2_decimal_floor(limit_price),
+            order = trader.place_order(instrument=ins, quantity=qty, price=Math.to_2_decimal_floor(avg_price),
                                        transaction=Transaction.SELL, order='limit')
         except Exception as e:
             raise e
