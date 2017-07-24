@@ -707,6 +707,7 @@ class UpdateMongo(object):
                     ask_size = lv2['asks_price'][0]
                     if verbose or lv2_quick_sell_verbose:
                         print(f'bis_size: {bid_size} VS ask_size: {ask_size}')
+                        print(f"bid_price: {lv2['bids'][0]} VS ask_price: {lv2['asks'][0]}")
 
                     if -.005 <= avg_price - highest_bid < .005:
                         try:
