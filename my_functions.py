@@ -747,22 +747,20 @@ class UpdateMongo(object):
         try:
             order = trader.place_order(instrument=ins, quantity=qty, price=Math.to_2_decimal_floor(avg_price * .97),
                                        transaction=Transaction.SELL)
+            return order
         except Exception as e:
             print(e)
             raise e
-        else:
-            return order
 
     @staticmethod
     def place_limit_sell_order(ins: dict, qty: int, avg_price: float) -> dict:
         try:
             order = trader.place_order(instrument=ins, quantity=qty, price=Math.to_2_decimal_floor(avg_price),
                                        transaction=Transaction.SELL, order='limit')
+            return order
         except Exception as e:
             print(e)
             raise e
-        else:
-            return order
 
     @staticmethod
     def pt_time_used(start: dt.datetime, message='') -> None:
