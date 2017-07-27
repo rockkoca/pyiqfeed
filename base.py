@@ -43,18 +43,12 @@ def get_live_index_interval_bars(tickers: dict, bar_len: int, seconds: int, auto
     }
 
     with iq.ConnConnector([bar_conn]) as connector:
-        i = 0
         for ticker in tickers.keys():
-            # if tickers[ticker]['auto'].get('chart', 0):
-            #     inv = tickers[ticker]['auto'].get('chart_inv', 30)
             bar_conn.watch(symbol=ticker,
                            interval_len=bar_len,
                            interval_type='s', update=1, lookback_bars=look_back_bars)
-            # watching[ticker] = inv
             print('watching index bar {}@{}'.format(ticker, bar_len))
-            # if i % 20 == 0:
-            #     time.sleep(3)
-            # i += 1
+
         while 1:
             time.sleep(3)
 
