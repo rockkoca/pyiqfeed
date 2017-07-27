@@ -1,8 +1,6 @@
 #! /usr/bin/env python3
 # coding=utf-8
 from my_functions import *
-import concurrent.futures
-import multiprocessing
 
 
 def get_indexes():
@@ -24,6 +22,41 @@ def get_indexes():
 
         while quote_conn.reader_running():
             time.sleep(5)
+
+
+def get_live_index_interval_bars(tickers: dict, bar_len: int, seconds: int, auto_unwatch=True):
+    """Get real-time interval bars"""
+    bar_conn = iq.BarConn(
+        name='{} pyiqfeed-index_interval_bars'.format('auto_unwatch' if auto_unwatch else 'auto_trade'))
+    bar_listener = MyBarListener(
+        "{}-index_interval_bars-listener".format('auto_unwatch' if auto_unwatch else 'auto_trade'))
+    bar_conn.add_listener(bar_listener)
+    # print('get_live_interval_bars {}@{}'.format(str(tickers), bar_len))
+    # watching = {
+    #
+    # }
+    # mongo_conn = UpdateMongo()
+    # if auto_unwatch:
+    tickers = {
+        'SPX.XO': '^GSPC',
+        'VIX.XO': '^VIX',
+    }
+
+    with iq.ConnConnector([bar_conn]) as connector:
+        i = 0
+        for ticker in tickers.keys():
+            # if tickers[ticker]['auto'].get('chart', 0):
+            #     inv = tickers[ticker]['auto'].get('chart_inv', 30)
+            bar_conn.watch(symbol=ticker,
+                           interval_len=bar_len,
+                           interval_type='s', update=1, lookback_bars=look_back_bars)
+            # watching[ticker] = inv
+            print('watching index bar {}@{}'.format(ticker, bar_len))
+            # if i % 20 == 0:
+            #     time.sleep(3)
+            # i += 1
+        while 1:
+            time.sleep(3)
 
 
 if __name__ == "__main__":
@@ -62,6 +95,9 @@ if __name__ == "__main__":
 
     bars = threading.Timer(5, get_live_multi_interval_bars, [{}, 30, 1, True])
     bars.start()
+
+    index_bars = threading.Timer(5, get_live_index_interval_bars, [{}, 30, 1, True])
+    index_bars.start()
 
     # Modify code below to connect to the socket etc as described above
     admin = iq.AdminConn(name="Launcher")
