@@ -31,6 +31,7 @@ output.
 from typing import Sequence
 import numpy as np
 from .conn import FeedConn, AdminConn, QuoteConn
+import datetime as dt
 
 
 # noinspection PyMethodMayBeStatic
@@ -537,6 +538,7 @@ class VerboseAdminListener(VerboseIQFeedListener):
     See documentation for SilentAdminListener member functions.
 
     """
+    last = dt.datetime.now()
 
     def __init__(self, name: str):
         super().__init__(name)
@@ -564,8 +566,11 @@ class VerboseAdminListener(VerboseIQFeedListener):
 
     def process_client_stats(self,
                              client_stats: AdminConn.ClientStatsMsg) -> None:
-        print("%s: Client Stats:" % self._name)
-        print(client_stats)
+        now = dt.datetime.now()
+        if (now - self.last).seconds > 60:
+            print("%s: Client Stats:" % self._name)
+            print(client_stats)
+            self.last = now
 
 
 # noinspection PyMethodMayBeStatic,PyMissingOrEmptyDocstring
