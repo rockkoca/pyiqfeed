@@ -437,6 +437,7 @@ class VerboseIQFeedListener:
     See documentation for SilentIQFeedListener member functions.
 
     """
+    last = dt.datetime.now()
 
     def __init__(self, name: str):
         self._name = name
@@ -456,8 +457,12 @@ class VerboseIQFeedListener:
         print("%s: Feed Reconnect Failed" % self._name)
 
     def process_conn_stats(self, stats: FeedConn.ConnStatsMsg) -> None:
-        print("%s: Connection Stats:" % self._name)
-        print(stats)
+
+        now = dt.datetime.now()
+        if (now - self.last).seconds > 60:
+            print("%s: Connection Stats:" % self._name)
+            print(stats)
+            self.last = now
 
     def process_timestamp(self, time_val: FeedConn.TimeStampMsg):
         print("%s: Timestamp:" % self._name)
