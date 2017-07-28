@@ -90,7 +90,7 @@ if __name__ == "__main__":
     bars = threading.Timer(5, get_live_multi_interval_bars, [{}, 30, 1, True])
     bars.start()
 
-    index_bars = threading.Timer(5, get_live_index_interval_bars, [{}, 30, 1, True])
+    index_bars = threading.Timer(5, get_live_index_interval_bars, [{}, 60, 1, True])
     index_bars.start()
 
     # Modify code below to connect to the socket etc as described above
