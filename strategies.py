@@ -76,8 +76,9 @@ class Strategy(object):
 
     def is_active_zone(self, bars: dict, lv1: dict) -> bool:
         """
-        如果 macd 和 kd 都处于金叉状态, 那么可以进行交易.
+        如果 macd 和 kd 都处于金叉状态, 那么可以进行交易. 绿色蜡烛也应该是检测参数之一
         如果 macd 和 kd 都不出于金叉状态, 如果价格还运行在 sma10 的上方, 那么仍然可能可以进行交易.
+
 
 
         :return:
