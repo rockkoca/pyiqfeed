@@ -36,8 +36,10 @@ if __name__ == '__main__':
     if screens.startswith('No Sockets found'):
         # create new screen
         print(run_command_with_timeout('screen -dmS index ./base', 10))
-        time.sleep(30)
+        print(run_command_with_timeout('screen -ls'))
+        time.sleep(20)
         print(run_command_with_timeout('screen -dmS stock ./lv12', 10))
+        run_command_with_timeout('screen -ls')
         # print('screen -S index\ncd pyiqfeed;git pull;python3 base.py')
         # print('screen -S stock\ncd pyiqfeed;git pull;python3 example.py')
 
