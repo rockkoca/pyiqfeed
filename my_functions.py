@@ -33,7 +33,7 @@ import robinhood.Robinhood as RB
 from robinhood.Robinhood import *
 from robinhood.credentials import *
 
-verbose = 0
+verbose = 1
 look_back_bars = 720
 
 trader = RB.Robinhood()
@@ -841,12 +841,13 @@ class UpdateMongo(object):
                            int(fields[8]),  # volume
                        ]
                        , dtype='f8'
-                   )
+                   ), \
+                   UpdateMongo.process_binary_symbol(fields[10])
 
     def update_bars(self, data: np.array, name: str, history=False, live=False) -> None:
         col_ins = self.db.instruments
         col = self.db.bars
-        symbol, ndarray = self.process_bars(data)
+        symbol, ndarray, request_id = self.process_bars(data)
         if len(ndarray) == 0:
             print('empty bar')
             return
@@ -1727,7 +1728,11 @@ def get_live_multi_interval_bars(tickers: dict, bar_len: int, seconds: int, auto
                 inv = tickers[ticker]['auto'].get('chart_inv', 30)
                 bar_conn.watch(symbol=ticker,
                                interval_len=inv,
-                               interval_type='s', update=1, lookback_bars=look_back_bars)
+                               interval_type='s',
+                               update=1,
+                               lookback_bars=look_back_bars,
+                               request_id=f'{ticker}-{inv}-S-AUTO'
+                               )
                 watching[ticker] = inv
                 print('watching {}@{}'.format(ticker, inv))
             if i % 20 == 0:
@@ -1760,7 +1765,11 @@ def get_live_multi_interval_bars(tickers: dict, bar_len: int, seconds: int, auto
                             time.sleep(.5)
                             bar_conn.watch(symbol=ticker,
                                            interval_len=new_inv,
-                                           interval_type='s', update=1, lookback_bars=look_back_bars)
+                                           interval_type='s',
+                                           update=1,
+                                           lookback_bars=look_back_bars,
+                                           request_id=f'{ticker}-{new_inv}-S-AUTO'
+                                           )
                             print('watching {}@{}'.format(ticker, new_inv))
                             watching[ticker] = new_inv
             bar_conn.request_watches()

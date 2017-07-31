@@ -3103,7 +3103,7 @@ class BarConn(FeedConn):
         [('symbol', 'S64'), ('date', 'M8[D]'), ('time', 'u8'),
          ('open_p', 'f8'), ('high_p', 'f8'), ('low_p', 'f8'),
          ('close_p', 'f8'), ('tot_vlm', 'u8'), ('prd_vlm', 'u8'),
-         ('num_trds', 'u8')])
+         ('num_trds', 'u8'), ('request_id', 'S64')])
 
     def __init__(self, name: str = "BarConn", host: str = host,
                  port: int = port):
@@ -3182,8 +3182,10 @@ class BarConn(FeedConn):
         interval_data['prd_vlm'] = np.float64(fields[9])
         interval_data['num_trds'] = (
             np.float64(fields[10]) if fields[10] != "" else 0)
+        interval_data['request_id'] = fields[0]
 
         bar_type = fields[1][1]
+        # print(bar_type, '*' * 50)
         if bar_type == 'U':
             for listener in self._listeners:
                 listener.process_latest_bar_update(interval_data)
@@ -3199,10 +3201,12 @@ class BarConn(FeedConn):
     def watch(self, symbol: str, interval_len: int, interval_type: str = None,
               bgn_flt: datetime.time = None, end_flt: datetime.time = None,
               update: int = None, bgn_bars: datetime.datetime = None,
-              lookback_days: int = None, lookback_bars: int = None) -> None:
+              lookback_days: int = None, lookback_bars: int = None, request_id: str = None) -> None:
         """
         Request live interval (bar) data.
 
+        :param request_id: str set a unique request_id
+        :type lookback_bars: int
         :param symbol: Symbol for which you are requesting data.
         :param interval_len: Interval length in interval_type units
         :param interval_type: 's' = secs, 'v' = volume, 't' = ticks
@@ -3243,8 +3247,10 @@ class BarConn(FeedConn):
         ef_str = fr.time_to_hhmmss(end_flt)
         update_str = fr.blob_to_str(update)
 
-        request_id = "B-%s-%0.4d-%s" % (symbol, interval_len, interval_type)
-
+        if not request_id:
+            request_id = "B-%s-%0.4d-%s" % (symbol, interval_len, interval_type)
+        else:
+            request_id = f'B-{request_id}'
         bar_cmd = "BW,%s,%s,%s,%s,%s,%s,%s,%s,%s,'',%s\r\n" % (
             symbol, interval_len, bgn_bar_str, lookback_days_str,
             lookback_bars_str,

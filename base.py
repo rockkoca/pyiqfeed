@@ -46,7 +46,10 @@ def get_live_index_interval_bars(tickers: dict, bar_len: int, seconds: int, auto
         for ticker in tickers.keys():
             bar_conn.watch(symbol=ticker,
                            interval_len=bar_len,
-                           interval_type='s', update=1, lookback_bars=look_back_bars)
+                           interval_type='s',
+                           update=1,
+                           lookback_bars=look_back_bars,
+                           request_id=f'{ticker}-{bar_len}-S-INDEX')
             print('watching index bar {}@{}'.format(ticker, bar_len))
 
         while 1:
@@ -89,9 +92,9 @@ if __name__ == "__main__":
 
     bars = threading.Timer(5, get_live_multi_interval_bars, [{}, 30, 1, True])
     bars.start()
-
-    index_bars = threading.Timer(5, get_live_index_interval_bars, [{}, 60, 1, True])
-    index_bars.start()
+    #
+    # index_bars = threading.Timer(5, get_live_index_interval_bars, [{}, 60, 1, True])
+    # index_bars.start()
 
     # Modify code below to connect to the socket etc as described above
     admin = iq.AdminConn(name="Launcher")
