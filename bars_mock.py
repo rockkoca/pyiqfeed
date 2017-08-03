@@ -2,6 +2,7 @@ from get_stocks import *
 from my_functions import *
 import ujson as json
 import sys
+import re
 
 sys.setrecursionlimit(150000000)
 
@@ -17,7 +18,7 @@ class MockBarListener(MyBarListener):
             print("%s: Process history bar:" % self._name)
         # print(bar_data)
         data = UpdateMongo.process_bars(bar_data)
-        print(data)
+        # print(data)
 
         # self.update_mongo.update_bars(bar_data, name=self._name, history=True)
 
@@ -26,15 +27,16 @@ def make_np_list(symbol: str, arr: np.ndarray) -> np.ndarray:
     first = np.array([symbol.encode('ascii')])
     second = np.array(list(arr))
     to = np.concatenate((first, second))
+    bar_time = UpdateMongo.tick_time(str(arr[0].tolist()), int(re.sub(r'[a-z]', '', str(arr[1]))))
 
     to[1] = str(to[1])
     to[2] = str(to[2])
     to[2] = to[2][:-13]
-    # print(to)
+    print(bar_time, to)
     return to
 
 
-def get_period_historical_bar_data(ticker: str, start: int, end=0, bar_len=15, num_bars=1000, bar_unit='s',
+def get_period_historical_bar_data(ticker: str, start: int, end=0, bar_len=30, num_bars=1000, bar_unit='s',
                                    ):
     global stop
     """Shows how to get interval bars."""
@@ -74,9 +76,9 @@ def get_period_historical_bar_data(ticker: str, start: int, end=0, bar_len=15, n
                                                     interval_type=bar_unit,
                                                     bgn_prd=start_time,
                                                     end_prd=end_time)
-            print(np.array([ticker]).shape)
-            print(np.array(list(bars[0])).shape)
-            print(make_np_list('AMD', bars[0]))
+            # print(np.array([ticker]).shape)
+            # print(np.array(list(bars[0])).shape)
+            # print(make_np_list('AMD', bars[0]))
             # print(type(bars[0][1]), type(bars[0][0]))
             # print(("%s000" % (np.floor(bars[0][0] + bars[0][1]).tolist().timestamp())))
             # with open('bars', 'w') as file:
@@ -96,7 +98,7 @@ def get_period_historical_bar_data(ticker: str, start: int, end=0, bar_len=15, n
                         )
                     else:
                         if i == 30:
-                            time.sleep(5)
+                            time.sleep(2)
                         hist_listener.process_live_bar(
                             [make_np_list(ticker, bar)]
                         )
@@ -104,7 +106,7 @@ def get_period_historical_bar_data(ticker: str, start: int, end=0, bar_len=15, n
                 else:
                     time.sleep(.5)
 
-                time.sleep(.1)
+                time.sleep(.2)
 
         except (iq.NoDataError, iq.UnauthorizedError) as err:
             print("No data returned because {0}".format(err))
@@ -114,4 +116,4 @@ if __name__ == '__main__':
     # lv1 = threading.Timer(5, get_historical_bar_data, ['amd', 1, False, MockBarListener])
     # lv1.start()
     time.sleep(5)
-    get_period_historical_bar_data('JNUG', 2, 1)
+    get_period_historical_bar_data('NVDA', 4, 3)

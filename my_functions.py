@@ -28,6 +28,12 @@ import numpy as np
 from talib.abstract import *
 from talib import MA_Type
 from scipy import stats as st
+from enum import Enum
+from calculator import *
+from collections import deque
+from common_functions import *
+import multiprocessing
+import time
 
 import robinhood.Robinhood as RB
 from robinhood.Robinhood import *
@@ -121,6 +127,10 @@ class UpdateMongo(object):
         'ins_to_symbol': {},
         'orders': {},
         'pos': {}
+
+    }
+
+    traders = {
 
     }
 
@@ -551,10 +561,10 @@ class UpdateMongo(object):
                                     bids[0] == asks[0] or bid_size[0] / ask_size[0] < .7):
                         task = executor.submit(self.lv2_quick_sell, symbol=symbol)
                         if bids[0] == asks[0]:
-                            print(f'BEFORE LV2 QUICK SELL \nbis_size: {bid_size} VS\nbid_price: {bids}')
-
-                            print(f"ask_price: {asks} \nask_size: {ask_size} VS")
-                        pass
+                            # print(f'BEFORE LV2 QUICK SELL \nbis_size: {bid_size} VS\nbid_price: {bids}')
+                            #
+                            # print(f"ask_price: {asks} \nask_size: {ask_size} VS")
+                            pass
 
                     result = col.update_one(
                         {'symbol': symbol},
@@ -856,6 +866,8 @@ class UpdateMongo(object):
         info = name.split('-')
         # assert symbol == info[0]
 
+
+
         instrument = col_ins.find_one({'symbol': symbol})
         update_meteor = name.startswith('auto_unwatch')
         # print(name, update_meteor)
@@ -900,8 +912,8 @@ class UpdateMongo(object):
         self.cache['bars'][symbol] = old
 
         # if not auto watch, calculate the indicators
-        if not update_meteor and live:
-            threading.Timer(.001, self.calculate_trend, [symbol, name]).start()
+        # if not update_meteor and live:
+        #     threading.Timer(.001, self.calculate_trend, [symbol, name]).start()
 
         if not history and (update_meteor or live):
             # old['bars'] = old['bars'].tolist()
@@ -921,6 +933,11 @@ class UpdateMongo(object):
         if dt.datetime.today().weekday() > 4 or 16 <= dt.datetime.now().hour or dt.datetime.now().hour < 5:
             # set_timeout(1, update_history_bars_after_done)
             threading.Timer(1, self.update_history_bars_after_done, [symbol, name]).start()
+
+        if ndarray[2] > 50:
+            if not self.traders.get(symbol):
+                self.traders[symbol] = Trader(symbol, trader, self, 500)
+                print('traders started')
 
     # used to update the mongo when history bars has done, but
     # no live bars are coming (in after hours)
@@ -2067,6 +2084,196 @@ def get_news():
 
 def combine_name(p: str, n: str) -> str:
     return "{}:{}".format(p, n)
+
+
+class Trader(object):
+    def __init__(
+            self,
+            symbol: str,
+            trader_client: RB,
+            mongo_client: UpdateMongo,
+            max_money: float = 100,
+    ):
+        self.symbol = symbol
+        self.trader = trader_client
+        self.mongo_client = mongo_client
+        self.position = 0
+        self.pending_orders = deque()
+        self.max_money = max_money
+        self.strategy = Strategy(self, self.symbol)
+        self.strategy.run(Strategy.Type.MACD_KD_3WHITE_QUICK_IN_OUT)
+
+    def update(self):
+        pass
+
+
+class Strategy(object):
+    class Type(Enum):
+        MACD_KD_3WHITE_QUICK_IN_OUT = "macd_kd_3white_quick_in_out"
+
+    def __init__(self, trader_client: Trader, symbol: str):
+        self.trader_client = trader_client
+        self.active_mode = False  # 是否在操作区域
+        self.symbol = symbol
+
+    def get_bars(self):
+        data = self.trader_client.mongo_client.cache['bars'].get(self.symbol)['bars']
+        # data = self.cache['bars'][symbol]['bars']
+        bars = {
+            'time': data[0],
+            "open": data[1],
+            'high': data[2],
+            'low': data[3],
+            'close': data[4],
+            'volume': data[5]
+        }
+        return bars
+
+    def get_lv1(self):
+        data = self.trader_client.mongo_client.cache['lv1'].get(self.symbol)
+        # self.cache['lv1'][symbol]
+        return data
+
+    def get_lv2(self):
+        data = self.trader_client.mongo_client.cache['lv2'].get(self.symbol)
+        # self.cache['lv1'][symbol]
+        return data
+
+    def entry(self, stop: float):
+        pass
+
+    def run(self, ty: Type) -> None:
+        # if ty not in self.Type.__members__:
+        #     print(ty, self.Type.__members__)
+        #     raise Exception('Not a valid strategy')
+        if ty.value == 'macd_kd_3white_quick_in_out':
+            strategy = threading.Timer(1, self.macd_kd_3white_quick_in_out)
+            strategy.start()
+        else:
+            raise Exception('Not a valid strategy')
+
+    def macd_kd_3white_quick_in_out(self):
+        """
+        买入点: 稍微高于 bid 并且低于布林带上限
+        卖出点: 稍微低于 ask
+        操作区域: MACD 和 KD 位于金叉内.
+                 如果KD发生高位钝化, 这时需要判断价格是否跌破EMA10, 停止操作一旦跌破EMA10
+        :return:
+        """
+
+        def test():
+            time.sleep(2)
+            print(test, 2)
+            return 5
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            while 1:
+                symbols = self.trader_client.mongo_client.get_symbols()
+                if symbols[self.symbol]['auto'].get('sp', 0):
+                    time.sleep(1)
+                    continue
+                # self.is_active_zone(self.get_bars(), self.get_lv1())
+                bars = self.get_bars()
+                lv1 = self.get_lv1()
+                # print(lv1)
+                # print(self.trader_client.mongo_client.cache['lv1'])
+                if bars:
+                    is_active_zone = executor.submit(self.is_active_zone, bars=bars.copy(), lv1=lv1)
+                    # is_active_zone = executor.submit(test)
+                    try:
+                        result = is_active_zone.result()
+                    except Exception as e:
+                        print(e)
+                    else:
+                        self.active_mode = result
+
+                        if self.active_mode:
+                            """
+                            在这里 进行 买卖操作
+                            """
+                            color_print(f'{self.symbol}: active zone  {"$" * 10}', Color.OKGREEN)
+                            color_print(f'{self.symbol}: active zone  {"$" * 10}', Color.OKGREEN)
+
+                            lv2 = self.get_lv2()
+                            pass
+                        else:
+                            # color_print(f'{self.symbol}: inactive zone  {"&" * 100}', Color.FAIL)
+                            # color_print(f'{self.symbol}: inactive zone  {"&" * 100}', Color.FAIL)
+                            pass
+
+                time.sleep(.2)
+
+    def is_active_zone(self, bars: dict, lv1: dict) -> bool:
+        """
+        如果 macd 和 kd 都处于金叉状态, 那么可以进行交易. and 3 while solders
+        如果 macd 和 kd 都不出于金叉状态, 如果价格还运行在 sma10 的上方, 那么仍然可能可以进行交易.
+
+        :return:
+        """
+        # bars = self.get_bars()
+        k, d = Calculator.kd_calculator(bars)
+        macd, single, diff = Calculator.macd_calculator(bars)
+        # tws = CDL3WHITESOLDIERS(bars)
+        # bulls = [CDL3WHITESOLDIERS(bars), CDLHAMMER(bars), CDLENGULFING(bars), CDLHARAMI(bars), CDLMORNINGSTAR(bars)]
+        # last = 5
+        # print(' ', [bull[-last:].tolist() for bull in bulls])
+        # print(' k:', k[-last:])
+        # print(' d:', d[-last:])
+        # print(' macd', macd[-last:])
+        # print(' single', single[-last:])
+        # if k[-1] > d[-1] and macd[-1] > single[-1]:
+        #     print(' ' + '#' * 100)
+        #     # print(' ', [bull[-last:].tolist() for bull in bulls])
+        #     #
+        #     # print(' ', macd[-10:], single[-10:])
+        #     # input()
+        #     print(' ', bars['close'][-2:], bars['open'][-2:])
+        #     print()
+        check_back_bars = 3
+        # TODO sma10 不能向下走
+
+        # TODO 三个 bar 至少有一个必须大于平均值
+
+        # np.all(a[:-1] <= a[1:]) 四个都在升高中, 不一定需要全绿, 不然排除情况太多了
+        avg_bar_height = np.average(
+            np.abs(bars['close'][-check_back_bars * 10:] - bars['open'][-check_back_bars * 10:]))
+        back_bars_close = bars['close'][-check_back_bars:]
+        back_bars_open = bars['open'][-check_back_bars:]
+        smas = Calculator.sma_calculator(bars)
+
+        print(avg_bar_height)
+        #  最后两个必须是绿色, 只要有一个大于平均 bar 高度的2倍以上. sma10 斜率不小于0
+        # if k[-1] > d[-1] and macd[-1] > single[-1] and \
+        #                 np.all(bars['close'][-check_back_bars:] > bars['open'][-check_back_bars:]) and \
+        #         np.any(np.abs(back_bars_close - back_bars_open) > 2 * avg_bar_height) and \
+        #         not np.any(np.gradient(smas[10][-2:]) < 0):
+        #     self.active_mode = True
+        #     return self.active_mode
+        #
+
+        # 利用 MA 10 和 15 以及 MACD 确定走势
+        if np.all(smas[8][-check_back_bars:] > smas[13][-check_back_bars:]) and macd[-1] > single[-1] and \
+                not np.any(np.gradient(smas[8][-check_back_bars:]) < 0) and \
+                not np.any(np.gradient(smas[5][-check_back_bars:]) < 0):
+            self.active_mode = True
+            return self.active_mode
+        # else:
+        #
+        # if self.active_mode:
+        #     sma10 = smas[10]
+        #     # lv1 = self.get_lv1()
+        #     if macd[-1] < single[-1] or np.any(bars['close'][-check_back_bars::] < sma10[
+        #                                                                            -check_back_bars:]) or \
+        #             np.any(np.gradient(smas[10][-check_back_bars:]) < 0):  # or lv1['last'] < sma10[-1]:
+
+        self.active_mode = False
+        return self.active_mode
+
+    def one_cent_trade_active_zone(self):
+        bars = self.get_bars()
+        smas = Calculator.sma_calculator(bars)
+        lv2 = self.get_lv2()
+        pass
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 from my_functions import *
+import numpy as np
 
 
 class Calculator(object):
@@ -16,10 +17,10 @@ class Calculator(object):
     def kd_calculator(sample: dict) -> type(np.ndarray):
         return STOCH(
             sample,
-            fastk_period=3,
+            fastk_period=9,
             slowk_period=3,
             slowk_matype=0,
-            slowd_period=9,
+            slowd_period=4,
             slowd_matype=0
         )
 
@@ -31,8 +32,11 @@ class Calculator(object):
     def sma_calculator(sample: dict) -> dict:
         return {
             5: SMA(sample, timeperiod=5),
+            8: SMA(sample, timeperiod=8),
             10: SMA(sample, timeperiod=10),
-            20: SMA(sample, timeperiod=20)
+            13: SMA(sample, timeperiod=13),
+            20: SMA(sample, timeperiod=20),
+            35: SMA(sample, timeperiod=35)
         }
 
     @staticmethod

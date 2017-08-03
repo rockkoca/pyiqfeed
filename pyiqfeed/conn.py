@@ -1672,7 +1672,8 @@ class HistoryConn(FeedConn):
                          ('open_p', 'f8'), ('high_p', 'f8'),
                          ('low_p', 'f8'), ('close_p', 'f8'),
                          ('tot_vlm', 'u8'), ('prd_vlm', 'u8'),
-                         ('num_trds', 'u8')])
+                         ('num_trds', 'u8'), ('request_id', 'S64')])
+
     bar_h5_type = np.dtype([('date', 'i8'), ('time', 'i8'),
                             ('open_p', 'f8'), ('high_p', 'f8'),
                             ('low_p', 'f8'), ('close_p', 'f8'),
@@ -1970,6 +1971,8 @@ class HistoryConn(FeedConn):
                 data[line_num]['tot_vlm'] = np.int64(dl[6])
                 data[line_num]['prd_vlm'] = np.int64(dl[7])
                 data[line_num]['num_trds'] = np.int64(dl[8])
+                data[line_num]['request_id'] = req_id
+
                 line_num += 1
                 if line_num >= res.num_pts:
                     assert len(res.raw_data) == 0
@@ -3743,9 +3746,13 @@ class Lv2Conn(QuoteConn):
         """Process a symbol update message."""
         assert len(fields) > 2
         assert fields[0] == "2"
-        update = self._create_update(fields)
-        for listener in self._listeners:
-            listener.process_update(update)
+        try:
+            update = self._create_update(fields)
+        except Exception as e:
+            print(e)
+        else:
+            for listener in self._listeners:
+                listener.process_update(update)
 
     def _create_update(self, fields: Sequence[str]) -> np.array:
         """Create an update message."""

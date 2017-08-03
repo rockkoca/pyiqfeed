@@ -1,11 +1,11 @@
 from enum import Enum
-from traders import *
+from traders import Trader
 from calculator import *
 
 
 class Strategy(object):
     class Type(Enum):
-        AMAZON_QUICK_IN_OUT: Strategy.amazon_quick_in_out
+        MACD_KD_3WHITE_QUICK_IN_OUT = "macd_kd_3white_quick_in_out"
 
     def __init__(self, trader_client: Trader, symbol: str):
         self.trader_client = trader_client
@@ -41,12 +41,11 @@ class Strategy(object):
     def run(self, ty: Type) -> None:
         if ty not in self.Type.__members__:
             raise Exception('Not a valid strategy')
-
-        if type(ty.value) == function:
-            strategy = threading.Timer(1, ty.value)
+        if ty.value == 'macd_kd_3white_quick_in_out':
+            strategy = threading.Timer(1, self.macd_kd_3white_quick_in_out)
             strategy.start()
 
-    def amazon_quick_in_out(self):
+    def macd_kd_3white_quick_in_out(self):
         """
         买入点: 稍微高于 bid 并且低于布林带上限
         卖出点: 稍微低于 ask
@@ -76,17 +75,16 @@ class Strategy(object):
 
     def is_active_zone(self, bars: dict, lv1: dict) -> bool:
         """
-        如果 macd 和 kd 都处于金叉状态, 那么可以进行交易. 绿色蜡烛也应该是检测参数之一
+        如果 macd 和 kd 都处于金叉状态, 那么可以进行交易. and 3 while solders
         如果 macd 和 kd 都不出于金叉状态, 如果价格还运行在 sma10 的上方, 那么仍然可能可以进行交易.
-
-
 
         :return:
         """
         # bars = self.get_bars()
         k, d = Calculator.kd_calculator(bars)
         macd, single, diff = Calculator.macd_calculator(bars)
-        if k > d and macd > single:
+        tws = CDL3WHITESOLDIERS(bars)
+        if k > d and macd > single and tws[-1] == 100:
             self.active_mode = True
             return self.active_mode
 
