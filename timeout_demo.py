@@ -118,7 +118,7 @@ import multiprocessing
 import time
 import datetime as dt
 import sys
-import numba
+# import numba
 
 
 def consumer(ns, event, stream: sys.stdout):
@@ -135,7 +135,7 @@ def consumer(ns, event, stream: sys.stdout):
         event.clear()
 
 
-@numba.jit
+# @numba.jit
 def fast(stream: sys.stdout):
     for i in range(100000):
         pass
