@@ -451,6 +451,7 @@ class UpdateMongo(object):
         symbol = dic['symbol']
         if symbol == 'VXX' and data['bid'] > 20:
             color_print(data, Color.OKBLUE)
+            return
         # print(symbol)
         update_meteor = name.startswith('auto_unwatch')
 
