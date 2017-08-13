@@ -666,6 +666,8 @@ class UpdateMongo(object):
             order_types = {}
             for order in orders:
                 canceled_orders[executor.submit(self.cancel_order, order=order)] = order
+
+                # 买单和卖单分类放置
                 order_types[order['type']] = [order] if order['type'] not in order_types else order_types[
                                                                                                   order['type']] + [
                                                                                                   order]

@@ -1,5 +1,5 @@
 # # # from get_stocks import *
-# # # from my_functions import *
+# from my_functions import *
 # # import requests
 # # import time
 # #
@@ -118,53 +118,61 @@ import multiprocessing
 import time
 import datetime as dt
 import sys
+
+
 # import numba
 
 
-def consumer(ns, event, stream: sys.stdout):
+def consumer(ns, events: dict, stream: sys.stdout):
+    print(id(ns))
     try:
         value = ns.lv1
     except Exception as err:
         print('Before event, consumer got:', str(err))
     while 1:
-        event.wait()
+        events['lv2'].wait()
         # for i in range(100000):
         #     pass
         stream.write(f'After event, consumer got: {(dt.datetime.now() - ns.lv1).microseconds / 1000} ms {id(ns)}\n')
         fast(stream)
-        event.clear()
+        events['lv2'].clear()
+        # print(trader.get_account())
 
 
 # @numba.jit
 def fast(stream: sys.stdout):
     for i in range(100000):
         pass
-    # stream.write('in fast' + str(dt.datetime.now().timestamp()))
+        # stream.write('in fast' + str(dt.datetime.now().timestamp()))
 
 
 class Main(object):
     cache = {}
     mgr = multiprocessing.Manager()
     namespace = mgr.Namespace()
-    event = multiprocessing.Event()
-    process = {}
+    namespaces = {}
+    processes = {}
+    events_keys = ['lv2', 'shut_down', 'pause', 'resume']
 
     def __init__(self):
-        if 'trader' not in self.process:
-            namespace = self.mgr.Namespace()
-            self.process['AMD'] = {
-                'process': multiprocessing.Process(target=consumer,
-                                                   args=(namespace, self.event, sys.stdout)),
-                'data': namespace
-            }
-            self.process['AMD']['process'].start()
+        pass
 
-    def update(self, data=None):
+    def create_process(self, symbol: str) -> dict:
+        self.namespaces[symbol] = self.mgr.Namespace()
+        events = {key: multiprocessing.Event() for key in self.events_keys}
+        print(id(self.namespaces[symbol]))
+        self.processes[symbol] = {
+            'process': multiprocessing.Process(target=consumer,
+                                               args=(self.namespaces[symbol], events, sys.stdout)),
+            'events': events,
+        }
+        self.processes[symbol]['process'].start()
+        return self.processes[symbol]
+
+    def update_lv2(self, symbol: str, data=None):
         if data:
-            self.process['AMD']['data'].lv1 = data
-
-            # print(self.process['AMD'], id(self.process['AMD']))
-        self.event.set()
+            self.namespaces[symbol].lv1 = data
+            self.processes[symbol]['events']['lv2'].set()
 
 
 if __name__ == '__main__':
@@ -185,11 +193,8 @@ if __name__ == '__main__':
     # c.join()
 
     main = Main()
-    print(main.process)
-    print(type(main.namespace))
-    for i in range(1, 10):
-        # main.namespace.value = time.time()
-        main.update(dt.datetime.now())
-        # print(dt.datetime.now())
-        # print(i)
-        time.sleep(.5)
+    stock = 'AMD'
+    main.create_process(stock)
+    print(id(main.namespaces[stock]))
+
+    main.update_lv2(stock, 'aa')
