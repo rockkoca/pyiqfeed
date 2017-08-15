@@ -946,10 +946,10 @@ class UpdateMongo(object):
             # set_timeout(1, update_history_bars_after_done)
             threading.Timer(1, self.update_history_bars_after_done, [symbol, name]).start()
 
-        if ndarray[2] > 50:
-            if not self.traders.get(symbol):
-                self.traders[symbol] = Trader(symbol, trader, self, 500)
-                print('traders started')
+        # if ndarray[2] > 50:
+        #     if not self.traders.get(symbol):
+        #         self.traders[symbol] = Trader(symbol, trader, self, 500)
+        #         print('traders started')
 
     # used to update the mongo when history bars has done, but
     # no live bars are coming (in after hours)

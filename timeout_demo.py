@@ -1,5 +1,5 @@
 # # # from get_stocks import *
-# from my_functions import *
+from my_functions import *
 # # import requests
 # # import time
 # #
@@ -115,6 +115,7 @@
 #         abstract_example()
 
 import multiprocessing
+import threading
 import time
 import datetime as dt
 import sys
@@ -123,20 +124,60 @@ import sys
 # import numba
 
 
-def consumer(ns, events: dict, stream: sys.stdout):
-    print(id(ns))
+def consumer(ns, events, stream: sys.stdout):
+    orders = {
+        'buy': deque(),
+        'sell': deque(),
+    }
+
+    def stop():
+        while 1:
+            events['stop'].wait()
+            stream.write('Stopping, canceling all the buying order and selling all the position\n')
+            events['pause'].clear()
+            events['lv2'].set()  # make the lv2 wait stops
+
+            exit(0)
+
+    def pause():
+        while 1:
+            events['pause'].wait()
+            stream.write('Pausing, canceling all the buying order and selling all the position\n')
+            events['pause'].clear()
+
+            events['resume'].wait()
+            events['pause'].clear()
+            events['resume'].clear()
+
+    pause_detect_process = threading.Thread(target=pause, args=())
+    stop_detect_process = threading.Thread(target=stop, args=())
+    pause_detect_process.start()
+    stop_detect_process.start()
     try:
         value = ns.lv1
     except Exception as err:
         print('Before event, consumer got:', str(err))
     while 1:
-        events['lv2'].wait()
-        # for i in range(100000):
-        #     pass
-        stream.write(f'After event, consumer got: {(dt.datetime.now() - ns.lv1).microseconds / 1000} ms {id(ns)}\n')
-        fast(stream)
-        events['lv2'].clear()
-        # print(trader.get_account())
+        # stream.write('Waiting for lv2\n')
+        if events['lv2'].wait() and not events['stop'].is_set():
+            # for i in range(100000):
+            #     pass
+            stream.write(f'After event, consumer got: {(dt.datetime.now() - ns.lv1).microseconds / 1000} ms {id(ns)}\n')
+            # fast(stream)
+            # stream.write(str(trader.get_account()))
+            events['lv2'].clear()
+            # if events['stop'].is_set():
+            #     stream.write('Received stop single, stopping.')
+            #     exit(0)
+        while events['pause'].is_set():
+            pass
+        if events['stop'].is_set():
+            stream.write('Stop is set, main process is stopping\n')
+            while stop_detect_process.is_alive():
+                pass
+            stream.write('stop_detect_process finished, main process is stopping\n')
+
+            exit(0)
 
 
 # @numba.jit
@@ -150,29 +191,34 @@ class Main(object):
     cache = {}
     mgr = multiprocessing.Manager()
     namespace = mgr.Namespace()
-    namespaces = {}
+    process = {}
     processes = {}
-    events_keys = ['lv2', 'shut_down', 'pause', 'resume']
+    events_keys = ['lv2', 'stop', 'pause', 'resume']
+    stream = sys.stdout
 
     def __init__(self):
         pass
 
-    def create_process(self, symbol: str) -> dict:
-        self.namespaces[symbol] = self.mgr.Namespace()
+    def create_process(self, symbol: str):
+        namespace = self.mgr.Namespace()
         events = {key: multiprocessing.Event() for key in self.events_keys}
-        print(id(self.namespaces[symbol]))
+        print(id(namespace))
+
         self.processes[symbol] = {
             'process': multiprocessing.Process(target=consumer,
-                                               args=(self.namespaces[symbol], events, sys.stdout)),
-            'events': events,
+                                               args=(namespace, events, sys.stdout)),
+            'data': namespace,
+            'events': events
         }
         self.processes[symbol]['process'].start()
-        return self.processes[symbol]
 
-    def update_lv2(self, symbol: str, data=None):
+    def update(self, data=None):
         if data:
-            self.namespaces[symbol].lv1 = data
-            self.processes[symbol]['events']['lv2'].set()
+            self.processes['AMD']['data'].lv1 = data
+            self.processes['AMD']['events']['lv2'].set()
+
+            # print(self.process['AMD'], id(self.process['AMD']))
+            # self.event.set()
 
 
 if __name__ == '__main__':
@@ -193,8 +239,17 @@ if __name__ == '__main__':
     # c.join()
 
     main = Main()
+    print(main.process)
+    print(type(main.namespace))
     stock = 'AMD'
-    main.create_process(stock)
-    print(id(main.namespaces[stock]))
-
-    main.update_lv2(stock, 'aa')
+    main.create_process('AMD')
+    time.sleep(1)
+    main.update(dt.datetime.now())
+    for i in range(10):
+        main.update(dt.datetime.now())
+        time.sleep(.05)
+    time.sleep(5)
+    main.update(dt.datetime.now())
+    time.sleep(1)
+    main.processes[stock]['events']['stop'].set()
+    time.sleep(5)
