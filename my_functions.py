@@ -644,7 +644,9 @@ class UpdateMongo(object):
                             float(pos['shares_held_for_buys']) > 0 or float(pos['quantity']) > 0 or float(
                     pos['quantity']) > 0):
             return
-        print(f'The time to sell {now}')
+        color_print('*' * 50, Color.HEADER, bold=True)
+        color_print('*' * 50, Color.HEADER, bold=True)
+        color_print(f'The time to sell {now}. {symbol}', Color.HEADER, bold=True)
         if verbose or lv2_quick_sell_verbose:
             print(f'time used before with statement: {self.pt_time_used(now)}')
 
@@ -676,7 +678,7 @@ class UpdateMongo(object):
                                                                                                   order['side']] + [
                                                                                                   order]
                 if verbose or lv2_quick_sell_verbose:
-                    print(f'canceling {order}')
+                    print(f'canceling {order.get("price")}, {order.get("quantity")}')
             if verbose or lv2_quick_sell_verbose:
                 print(f'time used before for_buy order: {self.pt_time_used(now)}')
 
@@ -697,7 +699,7 @@ class UpdateMongo(object):
             # else:
             #     time.sleep(.003)  # 暂定10ms, 然后更新 position
             if verbose or lv2_quick_sell_verbose:
-                print(f'time used before 等待所有取消订单: {self.pt_time_used(now)}')
+                color_print(f'time used before 等待所有取消订单: {self.pt_time_used(now)}', Color.UNDERLINE)
             # TODO 等待所有取消订单成功后更新 position
             for future in concurrent.futures.as_completed(canceled_orders):
                 try:

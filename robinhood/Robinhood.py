@@ -646,6 +646,14 @@ class Robinhood(object):
         """
         return self.session.get(self.endpoints['orders']).json()
 
+    def order_history_of(self, data: dict) -> dict:
+        """wrapper for portfolios
+
+        get orders from account
+
+        """
+        return self.session.get(self.endpoints['orders']).json()
+
     def dividends(self):
         """wrapper for portfolios
 
