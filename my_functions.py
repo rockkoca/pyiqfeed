@@ -562,7 +562,7 @@ class UpdateMongo(object):
                     lv1 = self.cache['lv1'].get(symbol, {})
                     lv1_bid_price = lv1.get('bid_price', bids[0])
 
-                    if lv1_bid_price < bids[0]:
+                    if float(lv1_bid_price) < bids[0]:
                         color_print(f'{symbol}: Delayed LV2', Color.WARNING)
                         print(lv2)
                     else:
