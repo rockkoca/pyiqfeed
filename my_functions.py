@@ -444,115 +444,127 @@ class UpdateMongo(object):
     def update_lv2(self, data: dict, name: str) -> None:
         if verbose:
             start = dt.datetime.now()
-        col = self.db.lv2
-        # dic = self._process_lv2(data)
-        dic = data
-        # print(dic)
-        symbol = dic['symbol']
-        if symbol == 'VXX' and data['bid'] > 20:
-            color_print(data, Color.OKBLUE)
-            return
-        # print(symbol)
-        update_meteor = name.startswith('auto_unwatch')
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
 
-        if dic:
+            col = self.db.lv2
+            # dic = self._process_lv2(data)
+            dic = data
             # print(dic)
-            keys = list(dic.keys())
-            bid = dic['bidinfovalid']
-            ask = dic['askinfovalid']
-            # old = col.find_one({'symbol': symbol})
-            old = self.cache['lv2'].get(symbol, {})
-            # print(old)
+            symbol = dic['symbol']
+            if symbol == 'VXX' and data['bid'] > 20:
+                color_print(data, Color.OKBLUE)
+                return
+            # print(symbol)
+            update_meteor = name.startswith('auto_unwatch')
 
-            mmid = dic['MMID']
-            old_mmid_data = {}
-            if not old:
-                new_dic = {
-                    mmid: dic
-                }
-            else:
-                new_dic = old
-                new_dic[mmid] = dic
-                # if mmid not in new_dic:
-                #     new_dic[mmid] = dic
-                # else:
-                #     new_dic[mmid] = dic
-                # old_dic = new_dic.get(mmid)
-                # old_mmid_data = old_dic.copy()
-                # for key in keys:
-                #     # if (ask and key.startswith('ask')) or (bid and key.startswith('bid')):
-                #     new_dic[mmid][key] = dic[key]
-                # else:
-                #     new_dic[mmid][key] = old_dic.get(key, dic[key])
-            #
-            # for k, v in new_dic.items():
-            #     print(type(v))
+            if dic:
+                # print(dic)
+                keys = list(dic.keys())
+                bid = dic['bidinfovalid']
+                ask = dic['askinfovalid']
+                # old = col.find_one({'symbol': symbol})
+                old = self.cache['lv2'].get(symbol, {})
+                # print(old)
 
-            self.cache['lv2'][symbol] = new_dic
+                # bid = ask 或者 ask = bid 这时候就要马上卖掉
+                if (
+                                        bid and ask and dic['bid'] == dic['asks']
+                            or (bid and dic['bid'] == old.get('bids', [0, ])[0])
+                        or (ask and dic['ask'] == old.get('asks', [0, ])[0])
 
-            if update_meteor:
-                # TODO create a best data structure for the web
-                # result = self.cache['lv2_result'].get(symbol, {})
-                # bids = result.get('bids', False)
-                # asks = result.get('asks', False)
-                # if result and old_mmid_data and ((bid and bids and dic['bid'] == bids[0] == old_mmid_data['bid'])
-                #                                  or (ask and asks and dic['ask'] == asks[0] == old_mmid_data['bid'])):
+                ):
+                    executor.submit(self.lv2_quick_sell, symbol=symbol)
+                    color_print(f'{symbol}: Earlier LV2 quick sell: ', Color.WARNING)
+                    print(dic)
+                    print(old)
+
+                mmid = dic['MMID']
+                old_mmid_data = {}
+                if not old:
+                    new_dic = {
+                        mmid: dic
+                    }
+                else:
+                    new_dic = old
+                    new_dic[mmid] = dic
+                    # if mmid not in new_dic:
+                    #     new_dic[mmid] = dic
+                    # else:
+                    #     new_dic[mmid] = dic
+                    # old_dic = new_dic.get(mmid)
+                    # old_mmid_data = old_dic.copy()
+                    # for key in keys:
+                    #     # if (ask and key.startswith('ask')) or (bid and key.startswith('bid')):
+                    #     new_dic[mmid][key] = dic[key]
+                    # else:
+                    #     new_dic[mmid][key] = old_dic.get(key, dic[key])
                 #
-                #     if bid and dic['bid_size'] != old_mmid_data['bid_size']:
-                #         result['bids_price'][0] += \
-                #             dic['bid_size'] - old_mmid_data['bid_size']
-                #     else:
-                #         if bid and dic['ask_size'] != old_mmid_data['ask_size']:
-                #             result['asks_price'][result['asks'].index(dic['ask'])] += \
-                #                 dic['ask_size'] - old_mmid_data['ask_size']
-                # else:
+                # for k, v in new_dic.items():
+                #     print(type(v))
 
-                lv2 = {
-                    'bids': {},
-                    'asks': {}
-                }
-                # symbol', 'MMID', 'bid', 'ask', 'bid_size', 'ask_size', 'bidinfovalid', 'askinfovalid'
-                # print(len(new_dic.keys()))
-                for val in new_dic.values():
+                self.cache['lv2'][symbol] = new_dic
 
-                    if val['bidinfovalid']:
-                        bid = val['bid']
-                        lv2['bids'][bid] = lv2['bids'].get(bid, 0) + val['bid_size']
+                if update_meteor:
+                    # TODO create a best data structure for the web
+                    # result = self.cache['lv2_result'].get(symbol, {})
+                    # bids = result.get('bids', False)
+                    # asks = result.get('asks', False)
+                    # if result and old_mmid_data and ((bid and bids and dic['bid'] == bids[0] == old_mmid_data['bid'])
+                    #                                  or (ask and asks and dic['ask'] == asks[0] == old_mmid_data['bid'])):
+                    #
+                    #     if bid and dic['bid_size'] != old_mmid_data['bid_size']:
+                    #         result['bids_price'][0] += \
+                    #             dic['bid_size'] - old_mmid_data['bid_size']
+                    #     else:
+                    #         if bid and dic['ask_size'] != old_mmid_data['ask_size']:
+                    #             result['asks_price'][result['asks'].index(dic['ask'])] += \
+                    #                 dic['ask_size'] - old_mmid_data['ask_size']
+                    # else:
+                    lv2 = {
+                        'bids': {},
+                        'asks': {}
+                    }
+                    # symbol', 'MMID', 'bid', 'ask', 'bid_size', 'ask_size', 'bidinfovalid', 'askinfovalid'
+                    # print(len(new_dic.keys()))
+                    for val in new_dic.values():
 
-                    if val['askinfovalid']:
-                        ask = val['ask']
-                        lv2['asks'][ask] = lv2['asks'].get(ask, 0) + val['ask_size']
+                        if val['bidinfovalid']:
+                            bid = val['bid']
+                            lv2['bids'][bid] = lv2['bids'].get(bid, 0) + val['bid_size']
 
-                lv2['symbol'] = symbol
+                        if val['askinfovalid']:
+                            ask = val['ask']
+                            lv2['asks'][ask] = lv2['asks'].get(ask, 0) + val['ask_size']
 
-                lv2['bids_order'] = sorted(list(lv2['bids'].keys()), reverse=True)
-                lv2['asks_order'] = sorted(list(lv2['asks'].keys()))
-                #
-                # lv2['bids_total'] = sum(lv2['bids'].values())
-                # lv2['asks_total'] = sum(lv2['asks'].values())
-                # print(lv2)
-                result = {
-                    'symbol': symbol,
-                    'bids': lv2['bids_order'],
-                    'bids_price': [lv2['bids'][price] for price in lv2['bids_order']],
-                    'asks': lv2['asks_order'],
-                    'asks_price': [lv2['asks'][price] for price in lv2['asks_order']],
-                    'bids_total': sum(lv2['bids'].values()),
-                    'asks_total': sum(lv2['asks'].values())
-                }
+                    lv2['symbol'] = symbol
 
-                self.cache['lv2_result'][symbol] = result
-                # print(result)
+                    lv2['bids_order'] = sorted(list(lv2['bids'].keys()), reverse=True)
+                    lv2['asks_order'] = sorted(list(lv2['asks'].keys()))
+                    #
+                    # lv2['bids_total'] = sum(lv2['bids'].values())
+                    # lv2['asks_total'] = sum(lv2['asks'].values())
+                    # print(lv2)
+                    result = {
+                        'symbol': symbol,
+                        'bids': lv2['bids_order'],
+                        'bids_price': [lv2['bids'][price] for price in lv2['bids_order']],
+                        'asks': lv2['asks_order'],
+                        'asks_price': [lv2['asks'][price] for price in lv2['asks_order']],
+                        'bids_total': sum(lv2['bids'].values()),
+                        'asks_total': sum(lv2['asks'].values())
+                    }
 
-                # TODO trigger quick sell, cancel order
-                # threading.Thread
-                if verbose:
-                    end = dt.datetime.now()
-                    used = end - start
-                    us = used.microseconds
-                    print(f'time used before mongo {us / 1000} ms or {us / 1000 / 1000} secs')
+                    self.cache['lv2_result'][symbol] = result
+                    # print(result)
 
-                with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                    # TODO trigger quick sell, cancel order
+                    # threading.Thread
+                    if verbose:
+                        end = dt.datetime.now()
+                        used = end - start
+                        us = used.microseconds
+                        print(f'time used before mongo {us / 1000} ms or {us / 1000 / 1000} secs')
+
                     task = ''
                     start_task = dt.datetime.now()
                     bid_size = result['bids_price']
@@ -564,7 +576,8 @@ class UpdateMongo(object):
 
                     if float(lv1_bid_price) < bids[0]:
                         color_print(f'{symbol}: Delayed LV2', Color.WARNING)
-                        print(lv2)
+                        print(result)
+                        print(lv1)
                     else:
                         if len(bid_size) > 0 \
                                 and len(ask_size) > 0 \
@@ -588,17 +601,17 @@ class UpdateMongo(object):
                             True
                         )
 
-                    try:
-                        if type(task) != str:
-                            data = task.result()
+                        try:
+                            if type(task) != str:
+                                data = task.result()
+                            else:
+                                data = None
+                        except Exception as exc:
+                            print('%r generated an exception: %s' % ('v2-quick-sell' + symbol, exc))
                         else:
-                            data = None
-                    except Exception as exc:
-                        print('%r generated an exception: %s' % ('v2-quick-sell' + symbol, exc))
-                    else:
-                        if data:
-                            print('%r submitted, %s, used %s' % ('v2-quick-sell' + symbol, data,
-                                                                 self.pt_time_used(start_task)))
+                            if data:
+                                print('%r submitted, %s, used %s' % ('v2-quick-sell' + symbol, data,
+                                                                     self.pt_time_used(start_task)))
                 # print(dir(result))
                 # print(result.matched_count, result.row_result)
                 pass
