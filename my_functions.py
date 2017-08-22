@@ -468,7 +468,7 @@ class UpdateMongo(object):
 
                 # bid = ask 或者 ask = bid 这时候就要马上卖掉
                 if (
-                                        bid and ask and dic['bid'] == dic['asks']
+                                        bid and ask and dic['bid'] == dic['ask']
                             or (bid and dic['bid'] == old.get('bids', [0, ])[0])
                         or (ask and dic['ask'] == old.get('asks', [0, ])[0])
 
