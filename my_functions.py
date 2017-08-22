@@ -559,30 +559,34 @@ class UpdateMongo(object):
                     ask_size = result['asks_price']
                     bids = result['bids']
                     asks = result['asks']
+                    lv1 = self.cache['lv1'].get(symbol, {})
+                    lv1_bid_price = lv1.get('bid_price', bids[0])
 
-                    if len(
-                            bid_size) > 0 \
-                            and len(ask_size) > 0 \
-                            and (
+                    if lv1_bid_price < bids[0]:
+                        color_print(f'{symbol}: Delayed LV2', Color.WARNING)
+                        print(lv2)
+                    else:
+                        if len(bid_size) > 0 \
+                                and len(ask_size) > 0 \
+                                and (
+                                                    bids[0] == asks[0]
+                                            or bid_size[0] / ask_size[0] < .7
+                                        or bid_size[0] < 8000
+                                ):
+                            task = executor.submit(self.lv2_quick_sell, symbol=symbol)
+                            if bids[0] == asks[0]:
+                                # print(f'BEFORE LV2 QUICK SELL \nbis_size: {bid_size} VS\nbid_price: {bids}')
+                                #
+                                # print(f"ask_price: {asks} \nask_size: {ask_size} VS")
+                                pass
 
-                                                bids[0] == asks[0]
-                                        or bid_size[0] / ask_size[0] < .7
-                                    or bid_size[0] < 8000
-                            ):
-                        task = executor.submit(self.lv2_quick_sell, symbol=symbol)
-                        if bids[0] == asks[0]:
-                            # print(f'BEFORE LV2 QUICK SELL \nbis_size: {bid_size} VS\nbid_price: {bids}')
-                            #
-                            # print(f"ask_price: {asks} \nask_size: {ask_size} VS")
-                            pass
-
-                    result = col.update_one(
-                        {'symbol': symbol},
-                        {
-                            "$set": result,
-                        },
-                        True
-                    )
+                        result = col.update_one(
+                            {'symbol': symbol},
+                            {
+                                "$set": result,
+                            },
+                            True
+                        )
 
                     try:
                         if type(task) != str:
@@ -948,10 +952,10 @@ class UpdateMongo(object):
             # set_timeout(1, update_history_bars_after_done)
             threading.Timer(1, self.update_history_bars_after_done, [symbol, name]).start()
 
-        # if ndarray[2] > 50:
-        #     if not self.traders.get(symbol):
-        #         self.traders[symbol] = Trader(symbol, trader, self, 500)
-        #         print('traders started')
+            # if ndarray[2] > 50:
+            #     if not self.traders.get(symbol):
+            #         self.traders[symbol] = Trader(symbol, trader, self, 500)
+            #         print('traders started')
 
     # used to update the mongo when history bars has done, but
     # no live bars are coming (in after hours)
