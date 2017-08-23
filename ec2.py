@@ -244,11 +244,11 @@ def create_small_instance():
 if __name__ == '__main__':
     count_running = 0
     for instance in instances:
-        print(instance.state)
+        # print(instance.state)
         if instance.state.get('Name') == 'running':
             count_running += 1
     # create_instance()
-    exit(0)
+    # exit(0)
 
     if count_running == 1:
         color_print('Requesting spot instance!', Color.HEADER)
