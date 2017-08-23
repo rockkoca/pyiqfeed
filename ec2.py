@@ -242,11 +242,17 @@ def create_small_instance():
 
 
 if __name__ == '__main__':
+    count_running = 0
+    for instance in instances:
+        print(instance.state)
+        if instance.state.get('Name') == 'running':
+            count_running += 1
     # create_instance()
-    # exit(0)
-    if len(instances) == 1:
+    exit(0)
+
+    if count_running == 1:
         color_print('Requesting spot instance!', Color.HEADER)
-        # request_spot_instance()
+        request_spot_instance()
     else:
         server_instance = None
         # locate the server instance
@@ -282,10 +288,10 @@ if __name__ == '__main__':
                 if image.state == 'available':
                     color_print(f'Image {name} created', Color.OKGREEN)
 
+                    create_small_instance()
                     color_print(f'Terminating all the instances...', Color.OKBLUE)
                     ec2.instances.filter(InstanceIds=[instance.id for instance in instances]).terminate()
                     time.sleep(30)
-                    create_small_instance()
 
                 else:
                     color_print(f'Image {name} cannot be created!', Color.FAIL)
