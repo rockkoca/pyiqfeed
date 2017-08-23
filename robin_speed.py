@@ -6,6 +6,8 @@ import requests
 import random
 from numba import jit
 
+print(trader.get_account())
+
 update_mongo = UpdateMongo()
 db = update_mongo.get_db()
 

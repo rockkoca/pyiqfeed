@@ -246,7 +246,7 @@ if __name__ == '__main__':
     # exit(0)
     if len(instances) == 1:
         color_print('Requesting spot instance!', Color.HEADER)
-        request_spot_instance()
+        # request_spot_instance()
     else:
         server_instance = None
         # locate the server instance

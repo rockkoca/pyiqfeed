@@ -575,9 +575,17 @@ class UpdateMongo(object):
                     lv1_bid_price = lv1.get('bid_price', bids[0])
 
                     if float(lv1_bid_price) < bids[0]:
-                        color_print(f'{symbol}: Delayed LV2', Color.WARNING)
-                        print(result)
-                        print(lv1)
+                        color_print(f'{symbol}: Delayed LV2', Color.HEADER)
+                        print(f"bids: {result.get('bids')}")
+                        print(f"bids_size: {result.get('bids_price')}")
+                        color_print(f"lv1_bid: {lv1.get('bid')}", Color.WARNING)
+
+                        print(f"asks: {result.get('asks')}")
+                        print(f"asks_size: {result.get('asks_price')}")
+                        color_print(f"lv1_ask: {lv1.get('ask')}", Color.WARNING)
+
+                        # print(result)
+                        # print(lv1)
                     else:
                         if len(bid_size) > 0 \
                                 and len(ask_size) > 0 \
