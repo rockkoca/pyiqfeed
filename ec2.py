@@ -212,7 +212,7 @@ def request_spot_instance():
 
     while num_running_instances() < 2:
         time.sleep(2)
-    time.sleep(30)
+    time.sleep(5)
 
     associate_address()
 
