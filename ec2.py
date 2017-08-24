@@ -252,6 +252,10 @@ if __name__ == '__main__':
 
     # create_instance()
     # exit(0)
+    today = dt.datetime.today()
+    if today.weekday() > 4:
+        color_print('No launch for weekend!', Color.FAIL)
+        exit(0)
 
     if num_running_instances() == 1:
         color_print('Requesting spot instance!', Color.HEADER)
