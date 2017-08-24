@@ -188,35 +188,42 @@ image_config = {
 
 def request_spot_instance():
     global instances
-    instances = get_instances()
-    if len(list(instances)) < 2:
-        try:
-            response = client.request_spot_instances(
-                AvailabilityZoneGroup='us-east-1a',
-                # BlockDurationMinutes=60 * 1,
-                ClientToken=dt.datetime.now().isoformat(),
-                DryRun=False,
-                InstanceCount=1,
-                # LaunchGroup='string',
-                LaunchSpecification=config,
-                SpotPrice='0.5',
-                Type='one-time',
-                # ValidFrom=dt.datetime(2017, 7, 17),
-                # ValidUntil=dt.datetime(2018, 1, 1),
-                ValidFrom=dt.datetime.utcnow() + dt.timedelta(seconds=2),
-                ValidUntil=dt.datetime.utcnow() + dt.timedelta(minutes=10),
-            )
-        except Exception as e:
-            print(e)
-            raise
-        else:
-            print(response)
+    try:
+        response = client.request_spot_instances(
+            AvailabilityZoneGroup='us-east-1a',
+            # BlockDurationMinutes=60 * 1,
+            ClientToken=dt.datetime.now().isoformat(),
+            DryRun=False,
+            InstanceCount=1,
+            # LaunchGroup='string',
+            LaunchSpecification=config,
+            SpotPrice='0.5',
+            Type='one-time',
+            # ValidFrom=dt.datetime(2017, 7, 17),
+            # ValidUntil=dt.datetime(2018, 1, 1),
+            ValidFrom=dt.datetime.utcnow() + dt.timedelta(seconds=2),
+            ValidUntil=dt.datetime.utcnow() + dt.timedelta(minutes=10),
+        )
+    except Exception as e:
+        print(e)
+        raise
+    else:
+        print(response)
 
-        while len(get_instances()) < 2:
-            time.sleep(2)
+    while num_running_instances() < 2:
+        time.sleep(2)
     time.sleep(30)
 
     associate_address()
+
+
+def num_running_instances():
+    count_running = 0
+    for instance_temp in instances:
+        # print(instance.state)
+        if instance_temp.state.get('Name') == 'running':
+            count_running += 1
+    return count_running
 
 
 def create_small_instance():
@@ -242,15 +249,11 @@ def create_small_instance():
 
 
 if __name__ == '__main__':
-    count_running = 0
-    for instance in instances:
-        # print(instance.state)
-        if instance.state.get('Name') == 'running':
-            count_running += 1
+
     # create_instance()
     # exit(0)
 
-    if count_running == 1:
+    if num_running_instances() == 1:
         color_print('Requesting spot instance!', Color.HEADER)
         request_spot_instance()
     else:
